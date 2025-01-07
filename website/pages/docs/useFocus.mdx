@@ -1,36 +1,81 @@
+<PageCard>
 # useFocus
 
-Adds focus event listeners that change the open state, like CSS
-`:focus{:.objectKey}`.
+Opens the floating element while the reference element has focus,
+like CSS `:focus`.
 
 ```js
 import {useFocus} from '@floating-ui/react';
 ```
 
-Inside your component:
+To manage focus within the floating element itself, use
+[`FloatingFocusManager`](/docs/FloatingFocusManager).
 
-```js /useFocus/
-const {context} = useFloating();
-const focus = useFocus(context);
-const {getReferenceProps, getFloatingProps} = useInteractions([
-  focus,
-]);
+<ShowFor packages={['react-dom']}>
+
+<PackageLimited>@floating-ui/react only</PackageLimited>
+
+</ShowFor>
+
+</PageCard>
+
+## Usage
+
+This Hook returns event handler props.
+
+To use it, pass it the `context{:.const}` object returned from
+`useFloating(){:js}`, and then feed its result into the
+`useInteractions(){:js}` array. The returned prop getters are
+then spread onto the elements for rendering.
+
+```js {9-13} /context/
+function App() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const {refs, floatingStyles, context} = useFloating({
+    open: isOpen,
+    onOpenChange: setIsOpen,
+  });
+
+  const focus = useFocus(context);
+
+  const {getReferenceProps, getFloatingProps} = useInteractions([
+    focus,
+  ]);
+
+  return (
+    <>
+      <div ref={refs.setReference} {...getReferenceProps()}>
+        Reference element
+      </div>
+      {isOpen && (
+        <div
+          ref={refs.setFloating}
+          style={floatingStyles}
+          {...getFloatingProps()}
+        >
+          Floating element
+        </div>
+      )}
+    </>
+  );
+}
 ```
 
 ## Props
 
-```js
-interface Props {
+```ts
+interface UseFocusProps {
   enabled?: boolean;
-  keyboardOnly?: boolean;
+  visibleOnly?: boolean;
 }
 ```
 
-### enabled
+### `enabled{:.key}`
 
 default: `true{:js}`
 
-Conditionally enable/disable the hook.
+Conditionally enable/disable the Hook.
 
 ```js
 useFocus(context, {
@@ -38,10 +83,15 @@ useFocus(context, {
 });
 ```
 
-### keyboardOnly
+### `visibleOnly{:.key}`
 
 default: `true{:js}`
 
-Whether the state only changes if the `focus{:.string}` event was
-triggered via keyboard rather than any pointer inputs
-(mouse/touch/pen).
+Whether the open state only changes if the `focus{:.string}`
+event is considered visible (`:focus-visible` CSS selector).
+
+```js
+useFocus(context, {
+  visibleOnly: false,
+});
+```

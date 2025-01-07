@@ -1,4 +1,5 @@
-import {test, expect} from '@playwright/test';
+import {expect, test} from '@playwright/test';
+
 import {click} from './utils/click';
 
 [
@@ -20,7 +21,7 @@ import {click} from './utils/click';
     await page.goto('http://localhost:1234/transform');
     await click(page, `[data-testid="transform-${node}"]`);
     expect(await page.locator('.container').screenshot()).toMatchSnapshot(
-      `${node}.png`
+      `${node}.png`,
     );
   });
 });

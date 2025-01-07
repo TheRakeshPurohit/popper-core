@@ -1,130 +1,169 @@
-import * as React from 'react';
-import mergeRefs from 'react-merge-refs';
 import {
-  useFloating,
-  offset,
+  autoUpdate,
   flip,
+  FloatingFocusManager,
+  FloatingList,
+  FloatingNode,
+  FloatingPortal,
+  FloatingTree,
+  offset,
+  safePolygon,
   shift,
-  useListNavigation,
-  useHover,
-  useTypeahead,
-  useInteractions,
-  useRole,
   useClick,
   useDismiss,
-  autoUpdate,
-  safePolygon,
-  FloatingPortal,
-  useFloatingTree,
+  useFloating,
   useFloatingNodeId,
   useFloatingParentNodeId,
-  FloatingNode,
-  FloatingTree,
-  FloatingFocusManager,
+  useFloatingTree,
+  useHover,
+  useInteractions,
+  useListItem,
+  useListNavigation,
+  useMergeRefs,
+  useRole,
+  useTypeahead,
 } from '@floating-ui/react';
+import {ChevronRightIcon} from '@radix-ui/react-icons';
+import c from 'clsx';
+import * as React from 'react';
 
-interface MenuItemProps {
-  label: string;
-  disabled?: boolean;
-}
+type MenuContextType = {
+  getItemProps: ReturnType<typeof useInteractions>['getItemProps'];
+  activeIndex: number | null;
+  setActiveIndex: React.Dispatch<React.SetStateAction<number | null>>;
+  setHasFocusInside: React.Dispatch<React.SetStateAction<boolean>>;
+  allowHover: boolean;
+  isOpen: boolean;
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  parent: MenuContextType | null;
+};
 
-export const MenuItem = React.forwardRef<
-  HTMLButtonElement,
-  MenuItemProps & React.ButtonHTMLAttributes<HTMLButtonElement>
->(({label, disabled, ...props}, ref) => {
-  return (
-    <button {...props} ref={ref} role="menuitem" disabled={disabled}>
-      {label}
-    </button>
-  );
+const MenuContext = React.createContext<MenuContextType>({
+  getItemProps: () => ({}),
+  activeIndex: null,
+  setActiveIndex: () => {},
+  setHasFocusInside: () => {},
+  allowHover: true,
+  isOpen: false,
+  setIsOpen: () => {},
+  parent: null,
 });
 
 interface MenuProps {
   label: string;
   nested?: boolean;
   children?: React.ReactNode;
+  keepMounted?: boolean;
 }
 
 export const MenuComponent = React.forwardRef<
   HTMLButtonElement,
   MenuProps & React.HTMLProps<HTMLButtonElement>
->(({children, label, ...props}, ref) => {
-  const [open, setOpen] = React.useState(false);
+>(function Menu(
+  {children, label, keepMounted = false, ...props},
+  forwardedRef,
+) {
+  const [isOpen, setIsOpen] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
   const [allowHover, setAllowHover] = React.useState(false);
+  const [hasFocusInside, setHasFocusInside] = React.useState(false);
 
-  const listItemsRef = React.useRef<Array<HTMLButtonElement | null>>([]);
-  const listContentRef = React.useRef(
-    React.Children.map(children, (child) =>
-      React.isValidElement(child) ? child.props.label : null
-    ) as Array<string | null>
-  );
+  const elementsRef = React.useRef<Array<HTMLButtonElement | null>>([]);
+  const labelsRef = React.useRef<Array<string | null>>([]);
 
   const tree = useFloatingTree();
   const nodeId = useFloatingNodeId();
   const parentId = useFloatingParentNodeId();
-  const nested = parentId != null;
+  const isNested = parentId != null;
 
-  const {x, y, reference, floating, strategy, context} =
-    useFloating<HTMLButtonElement>({
-      open,
-      nodeId,
-      onOpenChange: setOpen,
-      middleware: [
-        offset({mainAxis: 4, alignmentAxis: nested ? -5 : 0}),
-        flip(),
-        shift(),
-      ],
-      placement: nested ? 'right-start' : 'bottom-start',
-      whileElementsMounted: autoUpdate,
-    });
+  const parent = React.useContext(MenuContext);
+  const item = useListItem();
+
+  const {floatingStyles, refs, context} = useFloating<HTMLButtonElement>({
+    nodeId,
+    open: isOpen,
+    onOpenChange: setIsOpen,
+    placement: isNested ? 'right-start' : 'bottom-start',
+    middleware: [
+      offset({mainAxis: isNested ? 0 : 4, alignmentAxis: isNested ? -4 : 0}),
+      flip(),
+      shift(),
+    ],
+    whileElementsMounted: autoUpdate,
+  });
+
+  const hover = useHover(context, {
+    enabled: isNested && allowHover,
+    delay: {open: 75},
+    handleClose: safePolygon({blockPointerEvents: true}),
+  });
+  const click = useClick(context, {
+    event: 'mousedown',
+    toggle: !isNested || !allowHover,
+    ignoreMouse: isNested,
+  });
+  const role = useRole(context, {role: 'menu'});
+  const dismiss = useDismiss(context, {bubbles: true});
+  const listNavigation = useListNavigation(context, {
+    listRef: elementsRef,
+    activeIndex,
+    nested: isNested,
+    onNavigate: setActiveIndex,
+  });
+  const typeahead = useTypeahead(context, {
+    listRef: labelsRef,
+    onMatch: isOpen ? setActiveIndex : undefined,
+    activeIndex,
+  });
 
   const {getReferenceProps, getFloatingProps, getItemProps} = useInteractions([
-    useHover(context, {
-      handleClose: safePolygon({restMs: 25}),
-      enabled: nested && allowHover,
-      delay: {open: 75},
-    }),
-    useClick(context, {
-      toggle: !nested,
-      event: 'mousedown',
-      ignoreMouse: nested,
-    }),
-    useRole(context, {role: 'menu'}),
-    useDismiss(context),
-    useListNavigation(context, {
-      listRef: listItemsRef,
-      activeIndex,
-      nested,
-      onNavigate: setActiveIndex,
-    }),
-    useTypeahead(context, {
-      listRef: listContentRef,
-      onMatch: open ? setActiveIndex : undefined,
-      activeIndex,
-    }),
+    hover,
+    click,
+    role,
+    dismiss,
+    listNavigation,
+    typeahead,
   ]);
 
   // Event emitter allows you to communicate across tree components.
   // This effect closes all menus when an item gets clicked anywhere
   // in the tree.
   React.useEffect(() => {
+    if (!tree) return;
+
     function handleTreeClick() {
-      setOpen(false);
+      setIsOpen(false);
     }
 
-    tree?.events.on('click', handleTreeClick);
+    function onSubMenuOpen(event: {nodeId: string; parentId: string}) {
+      if (event.nodeId !== nodeId && event.parentId === parentId) {
+        setIsOpen(false);
+      }
+    }
+
+    tree.events.on('click', handleTreeClick);
+    tree.events.on('menuopen', onSubMenuOpen);
+
     return () => {
-      tree?.events.off('click', handleTreeClick);
+      tree.events.off('click', handleTreeClick);
+      tree.events.off('menuopen', onSubMenuOpen);
     };
-  }, [parentId, nodeId, tree]);
+  }, [tree, nodeId, parentId]);
+
+  React.useEffect(() => {
+    if (isOpen && tree) {
+      tree.events.emit('menuopen', {parentId, nodeId});
+    }
+  }, [tree, isOpen, nodeId, parentId]);
 
   // Determine if "hover" logic can run based on the modality of input. This
   // prevents unwanted focus synchronization as menus open and close with
   // keyboard navigation and the cursor is resting on the menu.
   React.useEffect(() => {
-    function onPointerMove() {
-      setAllowHover(true);
+    function onPointerMove({pointerType}: PointerEvent) {
+      if (pointerType !== 'touch') {
+        setAllowHover(true);
+      }
     }
 
     function onKeyDown() {
@@ -144,104 +183,173 @@ export const MenuComponent = React.forwardRef<
     };
   }, [allowHover]);
 
-  const mergedReferenceRef = React.useMemo(
-    () => mergeRefs([ref, reference]),
-    [reference, ref]
-  );
-
   return (
     <FloatingNode id={nodeId}>
       <button
-        ref={mergedReferenceRef}
-        {...getReferenceProps({
-          ...props,
-          className: `${nested ? 'MenuItem' : 'RootMenu'}${
-            open ? ' open' : ''
-          }`,
-          onClick(event) {
-            // Normalize button focus in Safari.
-            (event.currentTarget as HTMLButtonElement).focus();
+        ref={useMergeRefs([refs.setReference, item.ref, forwardedRef])}
+        data-open={isOpen ? '' : undefined}
+        tabIndex={
+          !isNested
+            ? props.tabIndex
+            : parent.activeIndex === item.index
+              ? 0
+              : -1
+        }
+        className={c(
+          props.className ||
+            'text-left flex gap-4 justify-between items-center rounded py-1 px-2',
+          {
+            'focus:bg-blue-500 focus:text-white outline-none': isNested,
+            'bg-blue-500 text-white': isOpen && isNested && !hasFocusInside,
+            'bg-slate-200 rounded py-1 px-2':
+              isNested && isOpen && hasFocusInside,
+            'bg-slate-200': !isNested && isOpen,
           },
-          ...(nested && {
-            // Indicates this is a nested <Menu /> acting as a <MenuItem />.
-            role: 'menuitem',
+        )}
+        {...getReferenceProps(
+          parent.getItemProps({
+            ...props,
+            onFocus(event: React.FocusEvent<HTMLButtonElement>) {
+              props.onFocus?.(event);
+              setHasFocusInside(false);
+              parent.setHasFocusInside(true);
+            },
+            onMouseEnter(event: React.MouseEvent<HTMLButtonElement>) {
+              props.onMouseEnter?.(event);
+              if (parent.allowHover && parent.isOpen) {
+                parent.setActiveIndex(item.index);
+              }
+            },
           }),
-        })}
+        )}
       >
-        {label}{' '}
-        {nested && (
-          <span aria-hidden="true" style={{marginLeft: 10}}>
-            ➔
+        {label}
+        {isNested && (
+          <span aria-hidden className="ml-4">
+            <ChevronRightIcon />
           </span>
         )}
       </button>
-      <FloatingPortal>
-        {open && (
-          <FloatingFocusManager
-            context={context}
-            // Make the root menu modal but nested submenus non-modal. Prevents
-            // outside interference when using VoiceOver/screen readers.
-            modal={!nested}
-            // Only return focus to the root menu when menus close.
-            returnFocus={!nested}
-            // Ensure touch-based screen readers can escape the list without
-            // needing to select anything due to the modal focus management
-            // on the root menu.
-            visuallyHiddenDismiss
-            initialFocus={-1}
-          >
-            <div
-              ref={floating}
-              className="Menu"
-              style={{
-                position: strategy,
-                top: y ?? 0,
-                left: x ?? 0,
-                width: 'max-content',
-              }}
-              {...getFloatingProps()}
-            >
-              {React.Children.map(
-                children,
-                (child, index) =>
-                  React.isValidElement(child) &&
-                  React.cloneElement(
-                    child,
-                    getItemProps({
-                      tabIndex: activeIndex === index ? 0 : -1,
-                      role: 'menuitem',
-                      className: 'MenuItem',
-                      ref(node: HTMLButtonElement) {
-                        listItemsRef.current[index] = node;
-                      },
-                      onClick(event) {
-                        child.props.onClick?.(event);
-                        tree?.events.emit('click');
-                      },
-                      // Allow focus synchronization if the cursor did not move.
-                      onPointerEnter() {
-                        if (allowHover) {
-                          setActiveIndex(index);
-                        }
-                      },
-                    })
-                  )
-              )}
-            </div>
-          </FloatingFocusManager>
-        )}
-      </FloatingPortal>
+      <MenuContext.Provider
+        value={{
+          activeIndex,
+          setActiveIndex,
+          getItemProps,
+          setHasFocusInside,
+          allowHover,
+          isOpen,
+          setIsOpen,
+          parent,
+        }}
+      >
+        <FloatingList elementsRef={elementsRef} labelsRef={labelsRef}>
+          {(keepMounted || isOpen) && (
+            <FloatingPortal>
+              <FloatingFocusManager
+                context={context}
+                modal={false}
+                initialFocus={isNested ? -1 : 0}
+                returnFocus={!isNested}
+              >
+                <div
+                  ref={refs.setFloating}
+                  className="flex flex-col rounded bg-white shadow-lg outline-none p-1 border border-slate-900/10 bg-clip-padding"
+                  style={{
+                    ...floatingStyles,
+                    visibility: !keepMounted
+                      ? undefined
+                      : isOpen
+                        ? 'visible'
+                        : 'hidden',
+                  }}
+                  aria-hidden={!isOpen}
+                  {...getFloatingProps()}
+                >
+                  {children}
+                </div>
+              </FloatingFocusManager>
+            </FloatingPortal>
+          )}
+        </FloatingList>
+      </MenuContext.Provider>
     </FloatingNode>
+  );
+});
+
+interface MenuItemProps {
+  label: string;
+  disabled?: boolean;
+}
+
+export const MenuItem = React.forwardRef<
+  HTMLButtonElement,
+  MenuItemProps & React.ButtonHTMLAttributes<HTMLButtonElement>
+>(function MenuItem({label, disabled, ...props}, forwardedRef) {
+  const menu = React.useContext(MenuContext);
+  const item = useListItem({label: disabled ? null : label});
+  const tree = useFloatingTree();
+  const isActive = item.index === menu.activeIndex;
+
+  return (
+    <button
+      {...props}
+      ref={useMergeRefs([item.ref, forwardedRef])}
+      type="button"
+      role="menuitem"
+      disabled={disabled}
+      tabIndex={isActive ? 0 : -1}
+      className={c(
+        'text-left flex py-1 px-2 focus:bg-blue-500 focus:text-white outline-none rounded',
+        {'opacity-40': disabled},
+      )}
+      {...menu.getItemProps({
+        active: isActive,
+        onClick(event: React.MouseEvent<HTMLButtonElement>) {
+          props.onClick?.(event);
+          tree?.events.emit('click');
+        },
+        onFocus(event: React.FocusEvent<HTMLButtonElement>) {
+          props.onFocus?.(event);
+          menu.setHasFocusInside(true);
+        },
+        onMouseEnter(event: React.MouseEvent<HTMLButtonElement>) {
+          props.onMouseEnter?.(event);
+          if (menu.allowHover && menu.isOpen) {
+            menu.setActiveIndex(item.index);
+          }
+        },
+        onKeyDown(event) {
+          function closeParents(parent: MenuContextType | null) {
+            parent?.setIsOpen(false);
+            if (parent?.parent) {
+              closeParents(parent.parent);
+            }
+          }
+
+          if (
+            event.key === 'ArrowRight' &&
+            // If the root reference is in a menubar, close parents
+            tree?.nodesRef.current[0].context?.elements.domReference?.closest(
+              '[role="menubar"]',
+            )
+          ) {
+            closeParents(menu.parent);
+          }
+        },
+      })}
+    >
+      {label}
+    </button>
   );
 });
 
 export const Menu = React.forwardRef<
   HTMLButtonElement,
   MenuProps & React.HTMLProps<HTMLButtonElement>
->((props, ref) => {
+>(function MenuWrapper(props, ref) {
   const parentId = useFloatingParentNodeId();
 
-  if (parentId == null) {
+  if (parentId === null) {
     return (
       <FloatingTree>
         <MenuComponent {...props} ref={ref} />
@@ -254,25 +362,30 @@ export const Menu = React.forwardRef<
 
 export const Main = () => {
   return (
-    <Menu label="Edit">
-      <MenuItem label="Undo" onClick={() => console.log('Undo')} />
-      <MenuItem label="Redo" />
-      <MenuItem label="Cut" disabled />
-      <Menu label="Copy as">
-        <MenuItem label="Text" />
-        <MenuItem label="Video" />
-        <Menu label="Image">
-          <MenuItem label=".png" />
-          <MenuItem label=".jpg" />
-          <MenuItem label=".svg" />
-          <MenuItem label=".gif" />
+    <>
+      <h1 className="text-5xl font-bold mb-8">Menu</h1>
+      <div className="grid place-items-center border border-slate-400 rounded lg:w-[40rem] h-[20rem] mb-4">
+        <Menu label="Edit">
+          <MenuItem label="Undo" onClick={() => console.log('Undo')} />
+          <MenuItem label="Redo" />
+          <MenuItem label="Cut" disabled />
+          <Menu label="Copy as" keepMounted>
+            <MenuItem label="Text" />
+            <MenuItem label="Video" />
+            <Menu label="Image" keepMounted>
+              <MenuItem label=".png" />
+              <MenuItem label=".jpg" />
+              <MenuItem label=".svg" />
+              <MenuItem label=".gif" />
+            </Menu>
+            <MenuItem label="Audio" />
+          </Menu>
+          <Menu label="Share">
+            <MenuItem label="Mail" />
+            <MenuItem label="Instagram" />
+          </Menu>
         </Menu>
-        <MenuItem label="Audio" />
-      </Menu>
-      <Menu label="Share">
-        <MenuItem label="Mail" />
-        <MenuItem label="Instagram" />
-      </Menu>
-    </Menu>
+      </div>
+    </>
   );
 };

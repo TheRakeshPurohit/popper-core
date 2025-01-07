@@ -1,4 +1,5 @@
-import {test, expect} from '@playwright/test';
+import {expect, test} from '@playwright/test';
+
 import {click} from './utils/click';
 
 ['table', 'td', 'th'].forEach((node) => {
@@ -6,12 +7,12 @@ import {click} from './utils/click';
     await page.goto('http://localhost:1234/table');
     await click(page, `[data-testid="reference-${node}"]`);
     expect(await page.locator('.container').screenshot()).toMatchSnapshot(
-      `${node}.png`
+      `${node}.png`,
     );
 
     await click(page, `[data-testid="inside-true"]`);
     expect(await page.locator('.container').screenshot()).toMatchSnapshot(
-      `${node}-inside.png`
+      `${node}-inside.png`,
     );
   });
 });

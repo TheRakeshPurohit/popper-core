@@ -1,515 +1,83 @@
-import 'tippy.js/dist/tippy.css';
-import 'tippy.js/themes/light-border.css';
-import 'tippy.js/animations/scale-subtle.css';
-import 'tippy.js/animations/perspective-subtle.css';
-
-import Tippy from '@tippyjs/react';
-import {inlinePositioning} from 'tippy.js';
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import {FloatingDelayGroup} from '@floating-ui/react';
 import cn from 'classnames';
-import {
-  useFloating,
-  shift,
-  getOverflowAncestors,
-} from '@floating-ui/react-dom';
-import {ArrowRight, GitHub} from 'react-feather';
-import useIsomorphicLayoutEffect from 'use-isomorphic-layout-effect';
-import Link from 'next/link';
 import Head from 'next/head';
+import {useEffect, useRef, useState} from 'react';
+import {
+  ArrowRight,
+  BarChart,
+  Edit,
+  GitHub,
+  Heart,
+  Share,
+} from 'react-feather';
 
-import {Chrome} from '../lib/components/Chrome';
-import {Floating} from '../lib/components/Floating';
-import {Logos} from '../lib/components/Logos';
-import {Cards} from '../lib/components/Cards';
-
-import {MINI_SPONSORS, SPONSORS} from '../data';
-
-import Logo from '../assets/logo.svg';
 import Text from '../assets/text.svg';
+import {Button} from '../lib/components/Button';
+import {Cards} from '../lib/components/Cards';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeading,
+  DialogTrigger,
+} from '../lib/components/Dialog';
+import {ComboboxDemo} from '../lib/components/Home/Combobox';
+import {
+  Menu,
+  MenuItem,
+} from '../lib/components/Home/DropdownMenu';
+import {PopoverDemo} from '../lib/components/Home/Popover';
+import {
+  Arrow,
+  Flip,
+  Placement,
+  Shift,
+  Size,
+  Virtual,
+} from '../lib/components/Home/PositioningDemos';
+import {SelectDemo} from '../lib/components/Home/Select';
+import {Link} from '../lib/components/Link';
+import {Logos} from '../lib/components/Logos';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '../lib/components/Tooltip';
+import {useAppContext} from './_app';
+import {getTierSponsors} from '../lib/utils/openCollective';
 
 const b64banner =
-  'data:image/jpeg;base64,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UGdQc2VudW0AAAAAUGdQcwAAAABQZ1BDAAAAAExlZnRVbnRGI1JsdAAAAAAAAAAAAAAAAFRvcCBVbnRGI1JsdAAAAAAAAAAAAAAAAFNjbCBVbnRGI1ByY0BZAAAAAAAAAAAAEGNyb3BXaGVuUHJpbnRpbmdib29sAAAAAA5jcm9wUmVjdEJvdHRvbWxvbmcAAAAAAAAADGNyb3BSZWN0TGVmdGxvbmcAAAAAAAAADWNyb3BSZWN0UmlnaHRsb25nAAAAAAAAAAtjcm9wUmVjdFRvcGxvbmcAAAAAADhCSU0D7QAAAAAAEABIAAAAAQACAEgAAAABAAI4QklNBCYAAAAAAA4AAAAAAAAAAAAAP4AAADhCSU0EDQAAAAAABAAAAFo4QklNBBkAAAAAAAQAAAAeOEJJTQPzAAAAAAAJAAAAAAAAAAABADhCSU0nEAAAAAAACgABAAAAAAAAAAI4QklNA/UAAAAAAEgAL2ZmAAEAbGZmAAYAAAAAAAEAL2ZmAAEAoZmaAAYAAAAAAAEAMgAAAAEAWgAAAAYAAAAAAAEANQAAAAEALQAAAAYAAAAAAAE4QklNA/gAAAAAAHAAAP////////////////////////////8D6AAAAAD/////////////////////////////A+gAAAAA/////////////////////////////wPoAAAAAP////////////////////////////8D6AAAOEJJTQQAAAAAAAACAAM4QklNBAIAAAAAAAgAAAAAAAAAADhCSU0EMAAAAAAABAEBAQE4QklNBC0AAAAAAAYAAQAAAAc4QklNBAgAAAAAABAAAAABAAACQAAAAkAAAAAAOEJJTQQeAAAAAAAEAAAAADhCSU0EGgAAAAADSQAAAAYAAAAAAAAAAAAAADMAAABkAAAACgBVAG4AdABpAHQAbABlAGQALQAxAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAABkAAAAMwAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAABAAAAABAAAAAAAAbnVsbAAAAAIAAAAGYm91bmRzT2JqYwAAAAEAAAAAAABSY3QxAAAABAAAAABUb3AgbG9uZwAAAAAAAAAATGVmdGxvbmcAAAAAAAAAAEJ0b21sb25nAAAA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PSJBZG9iZSBYTVAgQ29yZSA1LjYtYzE0NSA3OS4xNjM0OTksIDIwMTgvMDgvMTMtMTY6NDA6MjIgICAgICAgICI+IDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+IDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiIHhtbG5zOnhtcD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLyIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0RXZ0PSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VFdmVudCMiIHhtbG5zOnBob3Rvc2hvcD0iaHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyIgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIiB4bXA6Q3JlYXRvclRvb2w9IkFkb2JlIFBob3Rvc2hvcCBDQyAyMDE5IChNYWNpbnRvc2gpIiB4bXA6Q3JlYXRlRGF0ZT0iMjAyMi0wMy0zMFQyMjoxNTozMSsxMTowMCIgeG1wOk1ldGFkYXRhRGF0ZT0iMjAyMi0wMy0zMFQyMjoxNTozMSsxMTowMCIgeG1wOk1vZGlmeURhdGU9IjIwMjItMDMtMzBUMjI6MTU6MzErMTE6MDAiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6YzkwNjVjYWYtMGM0ZC00MDQwLTliODAtNWQyMTU0MDFlNGY2IiB4bXBNTTpEb2N1bWVudElEPSJhZG9iZTpkb2NpZDpwaG90b3Nob3A6NDk1NmU5ODctZDdmMy1mNzQxLTgxMTAtYTZiODFlNjk3Y2UwIiB4bXBNTTpPcmlnaW5hbERvY3VtZW50SUQ9InhtcC5kaWQ6Y2Y4MTU0MzctM2FkYS00Nzk3LTgzOTgtMGRhYjJhMGEyOGQxIiBwaG90b3Nob3A6Q29sb3JNb2RlPSIzIiBwaG90b3Nob3A6SUNDUHJvZmlsZT0iRGlzcGxheSIgZGM6Zm9ybWF0PSJpbWFnZS9qcGVnIj4gPHhtcE1NOkhpc3Rvcnk+IDxyZGY6U2VxPiA8cmRmOmxpIHN0RXZ0OmFjdGlvbj0iY3JlYXRlZCIgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDpjZjgxNTQzNy0zYWRhLTQ3OTctODM5OC0wZGFiMmEwYTI4ZDEiIHN0RXZ0OndoZW49IjIwMjItMDMtMzBUMjI6MTU6MzErMTE6MDAiIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkFkb2JlIFBob3Rvc2hvcCBDQyAyMDE5IChNYWNpbnRvc2gpIi8+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJzYXZlZCIgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDpjOTA2NWNhZi0wYzRkLTQwNDAtOWI4MC01ZDIxNTQwMWU0ZjYiIHN0RXZ0OndoZW49IjIwMjItMDMtMzBUMjI6MTU6MzErMTE6MDAiIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkFkb2JlIFBob3Rvc2hvcCBDQyAyMDE5IChNYWNpbnRvc2gpIiBzdEV2dDpjaGFuZ2VkPSIvIi8+IDwvcmRmOlNlcT4gPC94bXBNTTpIaXN0b3J5PiA8cGhvdG9zaG9wOkRvY3VtZW50QW5jZXN0b3JzPiA8cmRmOkJhZz4gPHJkZjpsaT41QkJFODFFOTJGMUQwQTZDQTVEREQwMEE4NzNFNkIwMDwvcmRmOmxpPiA8L3JkZjpCYWc+IDwvcGhvdG9zaG9wOkRvY3VtZW50QW5jZXN0b3JzPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA8P3hwYWNrZXQgZW5kPSJ3Ij8+/+IQCElDQ19QUk9GSUxFAAEBAAAP+GFwcGwCEAAAbW50clJHQiBYWVogB+YAAQAJABEAGQAmYWNzcEFQUEwAAAAAQVBQTAAAAAAAAAAAAAAAAAAAAAEAAPbWAAEAAAAA0y1hcHBsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASZGVzYwAAAVwAAABiZHNjbQAAAcAAAAScY3BydAAABlwAAAAjd3RwdAAABoAAAAAUclhZWgAABpQAAAAUZ1hZWgAABqgAAAAUYlhZWgAABrwAAAAUclRSQwAABtAAAAgMYWFyZwAADtwAAAAgdmNndAAADvwAAAAwbmRpbgAADywAAAA+Y2hhZAAAD2wAAAAsbW1vZAAAD5gAAAAodmNncAAAD8AAAAA4YlRSQwAABtAAAAgMZ1RSQwAABtAAAAgMYWFiZwAADtwAAAAgYWFnZwAADtwAAAAgZGVzYwAAAAAAAAAIRGlzcGxheQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAG1sdWMAAAAAAAAAJgAAAAxockhSAAAAFAAAAdhrb0tSAAAADAAAAexuYk5PAAAAEgAAAfhpZAAAAAAAEgAAAgpodUhVAAAAFAAAAhxjc0NaAAAAFgAAAjBkYURLAAAAHAAAAkZubE5MAAAAFgAAAmJmaUZJAAAAEAAAAnhpdElUAAAAGAAAAohlc0VTAAAAFgAAAqByb1JPAAAAEgAAArZmckNBAAAAFgAAAshhcgAAAAAAFAAAAt51a1VBAAAAHAAAAvJoZUlMAAAAFgAAAw56aFRXAAAACgAAAyR2aVZOAAAADgAAAy5za1NLAAAAFgAAAzx6aENOAAAACgAAAyRydVJVAAAAJAAAA1JlbkdCAAAAFAAAA3ZmckZSAAAAFgAAA4ptcwAAAAAAEgAAA6BoaUlOAAAAEgAAA7J0aFRIAAAADAAAA8RjYUVTAAAAGAAAA9BlbkFVAAAAFAAAA3Zlc1hMAAAAEgAAArZkZURFAAAAEAAAA+hlblVTAAAAEgAAA/hwdEJSAAAAGAAABApwbFBMAAAAEgAABCJlbEdSAAAAIgAABDRzdlNFAAAAEAAABFZ0clRSAAAAFAAABGZwdFBUAAAAFgAABHpqYUpQAAAADAAABJAATABDAEQAIAB1ACAAYgBvAGoAac7st+wAIABMAEMARABGAGEAcgBnAGUALQBMAEMARABMAEMARAAgAFcAYQByAG4AYQBTAHoA7QBuAGUAcwAgAEwAQwBEAEIAYQByAGUAdgBuAP0AIABMAEMARABMAEMARAAtAGYAYQByAHYAZQBzAGsA5gByAG0ASwBsAGUAdQByAGUAbgAtAEwAQwBEAFYA5AByAGkALQBMAEMARABMAEMARAAgAGEAIABjAG8AbABvAHIAaQBMAEMARAAgAGEAIABjAG8AbABvAHIATABDAEQAIABjAG8AbABvAHIAQQBDAEwAIABjAG8AdQBsAGUAdQByIA8ATABDAEQAIAZFBkQGSAZGBikEGgQ+BDsETAQ+BEAEPgQyBDgEOQAgAEwAQwBEIA8ATABDAEQAIAXmBdEF4gXVBeAF2V9pgnIATABDAEQATABDAEQAIABNAOAAdQBGAGEAcgBlAGIAbgD9ACAATABDAEQEJgQyBDUEQgQ9BD4EOQAgBBYEGgAtBDQEOARBBD8EOwQ1BDkAQwBvAGwAbwB1AHIAIABMAEMARABMAEMARAAgAGMAbwB1AGwAZQB1AHIAVwBhAHIAbgBhACAATABDAEQJMAkCCRcJQAkoACAATABDAEQATABDAEQAIA4qDjUATABDAEQAIABlAG4AIABjAG8AbABvAHIARgBhAHIAYgAtAEwAQwBEAEMAbwBsAG8AcgAgAEwAQwBEAEwAQwBEACAAQwBvAGwAbwByAGkAZABvAEsAbwBsAG8AcgAgAEwAQwBEA4gDswPHA8EDyQO8A7cAIAO/A7gDzAO9A7cAIABMAEMARABGAOQAcgBnAC0ATABDAEQAUgBlAG4AawBsAGkAIABMAEMARABMAEMARAAgAGEAIABDAG8AcgBlAHMwqzDpMPwATABDAER0ZXh0AAAAAENvcHlyaWdodCBBcHBsZSBJbmMuLCAyMDIyAABYWVogAAAAAAAA81EAAQAAAAEWzFhZWiAAAAAAAACD3wAAPb////+7WFlaIAAAAAAAAEq/AACxNwAACrlYWVogAAAAAAAAKDgAABELAADIuWN1cnYAAAAAAAAEAAAAAAUACgAPABQAGQAeACMAKAAtADIANgA7AEAARQBKAE8AVABZAF4AYwBoAG0AcgB3AHwAgQCGAIsAkACVAJoAnwCjAKgArQCyALcAvADBAMYAywDQANUA2wDgAOUA6wDwAPYA+wEBAQcBDQETARkBHwElASsBMgE4AT4BRQFMAVIBWQFgAWcBbgF1AXwBgwGLAZIBmgGhAakBsQG5AcEByQHRAdkB4QHpAfIB+gIDAgwCFAIdAiYCLwI4AkECSwJUAl0CZwJxAnoChAKOApgCogKsArYCwQLLAtUC4ALrAvUDAAMLAxYDIQMtAzgDQwNPA1oDZgNyA34DigOWA6IDrgO6A8cD0wPgA+wD+QQGBBMEIAQtBDsESARVBGMEcQR+BIwEmgSoBLYExATTBOEE8AT+BQ0FHAUrBToFSQVYBWcFdwWGBZYFpgW1BcUF1QXlBfYGBgYWBicGNwZIBlkGagZ7BowGnQavBsAG0QbjBvUHBwcZBysHPQdPB2EHdAeGB5kHrAe/B9IH5Qf4CAsIHwgyCEYIWghuCIIIlgiqCL4I0gjnCPsJEAklCToJTwlkCXkJjwmkCboJzwnlCfsKEQonCj0KVApqCoEKmAquCsUK3ArzCwsLIgs5C1ELaQuAC5gLsAvIC+EL+QwSDCoMQwxcDHUMjgynDMAM2QzzDQ0NJg1ADVoNdA2ODakNww3eDfgOEw4uDkkOZA5/DpsOtg7SDu4PCQ8lD0EPXg96D5YPsw/PD+wQCRAmEEMQYRB+EJsQuRDXEPURExExEU8RbRGMEaoRyRHoEgcSJhJFEmQShBKjEsMS4xMDEyMTQxNjE4MTpBPFE+UUBhQnFEkUahSLFK0UzhTwFRIVNBVWFXgVmxW9FeAWAxYmFkkWbBaPFrIW1hb6Fx0XQRdlF4kXrhfSF/cYGxhAGGUYihivGNUY+hkgGUUZaxmRGbcZ3RoEGioaURp3Gp4axRrsGxQbOxtjG4obshvaHAIcKhxSHHscoxzMHPUdHh1HHXAdmR3DHeweFh5AHmoelB6+HukfEx8+H2kflB+/H+ogFSBBIGwgmCDEIPAhHCFIIXUhoSHOIfsiJyJVIoIiryLdIwojOCNmI5QjwiPwJB8kTSR8JKsk2iUJJTglaCWXJccl9yYnJlcmhya3JugnGCdJJ3onqyfcKA0oPyhxKKIo1CkGKTgpaymdKdAqAio1KmgqmyrPKwIrNitpK50r0SwFLDksbiyiLNctDC1BLXYtqy3hLhYuTC6CLrcu7i8kL1ovkS/HL/4wNTBsMKQw2zESMUoxgjG6MfIyKjJjMpsy1DMNM0YzfzO4M/E0KzRlNJ402DUTNU01hzXCNf02NzZyNq426TckN2A3nDfXOBQ4UDiMOMg5BTlCOX85vDn5OjY6dDqyOu87LTtrO6o76DwnPGU8pDzjPSI9YT2hPeA+ID5gPqA+4D8hP2E/oj/iQCNAZECmQOdBKUFqQaxB7kIwQnJCtUL3QzpDfUPARANER0SKRM5FEkVVRZpF3kYiRmdGq0bwRzVHe0fASAVIS0iRSNdJHUljSalJ8Eo3Sn1KxEsMS1NLmkviTCpMcky6TQJNSk2TTdxOJU5uTrdPAE9JT5NP3VAnUHFQu1EGUVBRm1HmUjFSfFLHUxNTX1OqU/ZUQlSPVNtVKFV1VcJWD1ZcVqlW91dEV5JX4FgvWH1Yy1kaWWlZuFoHWlZaplr1W0VblVvlXDVchlzWXSddeF3JXhpebF69Xw9fYV+zYAVgV2CqYPxhT2GiYfViSWKcYvBjQ2OXY+tkQGSUZOllPWWSZedmPWaSZuhnPWeTZ+loP2iWaOxpQ2maafFqSGqfavdrT2una/9sV2yvbQhtYG25bhJua27Ebx5veG/RcCtwhnDgcTpxlXHwcktypnMBc11zuHQUdHB0zHUodYV14XY+dpt2+HdWd7N4EXhueMx5KnmJeed6RnqlewR7Y3vCfCF8gXzhfUF9oX4BfmJ+wn8jf4R/5YBHgKiBCoFrgc2CMIKSgvSDV4O6hB2EgITjhUeFq4YOhnKG14c7h5+IBIhpiM6JM4mZif6KZIrKizCLlov8jGOMyo0xjZiN/45mjs6PNo+ekAaQbpDWkT+RqJIRknqS45NNk7aUIJSKlPSVX5XJljSWn5cKl3WX4JhMmLiZJJmQmfyaaJrVm0Kbr5wcnImc951kndKeQJ6unx2fi5/6oGmg2KFHobaiJqKWowajdqPmpFakx6U4pammGqaLpv2nbqfgqFKoxKk3qamqHKqPqwKrdavprFys0K1ErbiuLa6hrxavi7AAsHWw6rFgsdayS7LCszizrrQltJy1E7WKtgG2ebbwt2i34LhZuNG5SrnCuju6tbsuu6e8IbybvRW9j74KvoS+/796v/XAcMDswWfB48JfwtvDWMPUxFHEzsVLxcjGRsbDx0HHv8g9yLzJOsm5yjjKt8s2y7bMNcy1zTXNtc42zrbPN8+40DnQutE80b7SP9LB00TTxtRJ1MvVTtXR1lXW2Ndc1+DYZNjo2WzZ8dp22vvbgNwF3IrdEN2W3hzeot8p36/gNuC94UThzOJT4tvjY+Pr5HPk/OWE5g3mlucf56noMui86Ubp0Opb6uXrcOv77IbtEe2c7ijutO9A78zwWPDl8XLx//KM8xnzp/Q09ML1UPXe9m32+/eK+Bn4qPk4+cf6V/rn+3f8B/yY/Sn9uv5L/tz/bf//cGFyYQAAAAAAAwAAAAJmZgAA8qcAAA1ZAAAT0AAAClt2Y2d0AAAAAAAAAAEAAQAAAAAAAAABAAAAAQAAAAAAAAABAAAAAQAAAAAAAAABAABuZGluAAAAAAAAADYAAK4UAABR7AAAQ9cAALCkAAAmZgAAD1wAAFANAABUOQACMzMAAjMzAAIzMwAAAAAAAAAAc2YzMgAAAAAAAQxCAAAF3v//8yYAAAeTAAD9kP//+6L///2jAAAD3AAAwG5tbW9kAAAAAAAABhAAAKBQ/WJtYgAAAAAAAAAAAAAAAAAAAAAAAAAAdmNncAAAAAAAAwAAAAJmZgADAAAAAmZmAAMAAAACZmYAAAACMzM0AAAAAAIzMzQAAAAAAjMzNAD/7gAOQWRvYmUAZEAAAAAB/9sAhAABAQEBAQEBAQEBAgEBAQICAQEBAQICAgICAgICAwIDAwMDAgMDBAQEBAQDBQUFBQUFBwcHBwcICAgICAgICAgIAQEBAQICAgQDAwQHBQQFBwgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAj/wAARCAAzAGQDAREAAhEBAxEB/90ABAAN/8QAhgAAAQMFAQEAAAAAAAAAAAAAAAUGBwECBAgKAwkBAAEFAQEAAAAAAAAAAAAAAAABAwQFBgIHEAABAwMDAgQFBAMAAAAAAAABAAIDEQQGIRIFMUFRYRMHcYGRIjLwsdGSIxUIEQACAQQCAgIDAQAAAAAAAAAAAQIRAwQFITESBkEUURMHFf/aAAwDAQACEQMRAD8A5BloBoEACABAFwaT0CWgJGdBx805G1hNeicjabJFvHchT/0Fztr6Z+Kd+qyR9CQmT2EsH5NTM7bRHuY8omAQR1TbQw0UQICABAAgD//Q5BloBoEAPHEMJ5rMr9lhxNq6eV5oA0VTsLUpdF3pdHezrqhbVWSfknsHmWKQMuOU498cTxUPoaKRjY7m6UNZu/5vnYMFO5HgaFthVyXN3wkU8lbLUS/BlrOsbZJHCYYxgaZI/PUfyptjXpGpwdQkuRy3GOWzI6bB37KTPFVC4/zYJEc87j8dHFjeldooqu/h16KfO1Sa4RFV9w80bzRh8tFXz10/wY/K18osRJLeSP8AJtFBu48o9lZO20Y6YGwQAIA//9HkGWgGi5oq4BKhUbqf8rZBxWO82Jb+Nu99NjpAPHzXrH881uNfueN35Nr6p7DPX3VNI+iOe85wmZcCLJkTJZHj/GWgaVXpWd6FjW7nlA93yPfZbXE/XOJqbzOCwWDHOEG3v0VNtNJG1HowctWlzQYr7dts5zQKU0p4LC3Y0Z1C2oiNfP0IqoVwWQ2JLJ16S0N3E6Kbg4qnLkZlCqLmYE+8bu9E6+IWwjprXgQrmp810MHK8Ck4+J8np7duuoWE32tjHoy2z0rguiC7uAwSuYexovPrsaMxl2FGYibGgQB//9LkGWgGj1ipvFf1quoionD28lbDdwuDtpBGoNFtvXb3hNNM0mqgm+T6CYNyELraL1ZN1AD9xXuuq2icVVnremswUeBxZW62mtjtIrrpouN1lwnDgvMqEfE1s5bZFNJqOp0r0+i8qy+JMzd2VGMq+nbQfd8fkqi5PkZcjMx+e1fcxslcKE6k99VMwc5QY/jTi3ybK8FY8O60bI5zQKbiKjqtDLdqnZtMLGteNSFvdy54uG3mjhLakEaUWR2+yU6mL9qlbjFpGhfMPa+7lLTUVP7rD3ZVZ4jlyTkxITREBAH/0+QZaAaLmmjgUqFTH1jfLmzmjduptKuMHL8GW2DkeLNocU9whbRMaZqaAELZ4m/cY9noer26S7HryHuPHLAQZgdK9U7f9gb+S9vbmLj2Q3zmaxufIRJoe6z9/aVMxl7hJjCvMxD6jfr4KvuZ9StubwQmZpPbTiRj+h0UKWayE984vhj6sfeK+trb0hOelOpR9+RZ2fb5xVKjAyfO7vmnO3yl1dTUqJcvtlBst5O8+WRpI8yOLj31UdmclKrPNIcggD//1OQZaAaBAHvFM6NwINF2p0O4zaHDac7PbgUeR46p6N9osLOa4ijJk87mUMh+qT7DZIls5MQbrlZZiavOq4lcbIN3KbEp0z3dSuPJkV3GeZcSak1XJy5MNzvFFQqUrVAhRAAgAQB//9XkGWgGgQAIAuHz+SBS7+yBCxAMogAQAIAEACABAAgD/9k=';
+  'data:image/png;base64,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';
 
-const Reference = forwardRef(({className, children}, ref) => {
-  return (
-    <button
-      ref={ref}
-      className={cn(
-        `text-sm z-50 font-bold text-gray-900 bg-gray-50 p-2 w-24 h-24 border-2 border-gray-900 border-dashed cursor-default`,
-        className
-      )}
-      aria-label="Reference element"
-    >
-      {children}
-    </button>
-  );
-});
+function HomePage({sponsors}) {
+  const {pageTransitionStatus} = useAppContext();
+  const bannerRef = useRef();
+  const logoRef = useRef();
 
-function GridItem({
-  title,
-  description,
-  chrome,
-  titleClass,
-  demoLink,
-}) {
-  return (
-    <div className="flex flex-col overflow-x-hidden justify-between bg-gray-50 dark:bg-gray-700 md:rounded-lg px-4 py-8 sm:p-8 relative">
-      <div className="overflow-hidden">
-        <h3 className={`text-3xl font-bold mb-2 ${titleClass}`}>
-          {title}
-        </h3>
-        <p className="text-xl mb-6">{description}</p>
-      </div>
-      <div className="relative items-center bg-gray-800 rounded-lg lg:h-auto">
-        {chrome}
-      </div>
-      <a
-        className="transition-colors inline-flex items-center gap-1 border-none underline underline-offset-4 font-bold text-rose-500 hover:text-gray-1000 decoration-rose-500/80 hover:decoration-gray-1000 dark:text-rose-300 dark:hover:text-gray-50 dark:decoration-rose-300/80 dark:hover:decoration-gray-50 decoration-2 absolute right-6 top-6"
-        href={demoLink}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        CodeSandbox
-      </a>
-    </div>
-  );
-}
-
-function Placement() {
-  const [placement, setPlacement] = useState('top');
-
-  return (
-    <GridItem
-      titleClass="text-violet-600 dark:text-violet-300"
-      title="Placement"
-      description="Places your floating element relative to another element."
-      demoLink="https://codesandbox.io/s/lively-waterfall-rbc1pi?file=/src/index.js"
-      chrome={
-        <Chrome
-          label="Click the dots"
-          center
-          className="grid items-center relative"
-        >
-          {[
-            {
-              placement: 'top',
-              styles: {
-                left: 'calc(50% - 10px - 1rem)',
-                top: 0,
-              },
-            },
-            {
-              placement: 'top-start',
-              styles: {
-                left: 'calc(50% - 70px - 1rem)',
-                top: 0,
-              },
-            },
-            {
-              placement: 'top-end',
-              styles: {
-                left: 'calc(50% + 50px - 1rem)',
-                top: 0,
-              },
-            },
-            {
-              placement: 'bottom',
-              styles: {
-                left: 'calc(50% - 10px - 1rem)',
-                bottom: 0,
-              },
-            },
-            {
-              placement: 'bottom-start',
-              styles: {
-                left: 'calc(50% - 70px - 1rem)',
-                bottom: 0,
-              },
-            },
-            {
-              placement: 'bottom-end',
-              styles: {
-                left: 'calc(50% + 50px - 1rem)',
-                bottom: 0,
-              },
-            },
-            {
-              placement: 'right',
-              styles: {
-                top: 'calc(50% - 10px - 1rem)',
-                right: 'min(50px, 5%)',
-              },
-            },
-            {
-              placement: 'right-start',
-              styles: {
-                top: 'calc(50% - 70px - 1rem)',
-                right: 'min(50px, 5%)',
-              },
-            },
-            {
-              placement: 'right-end',
-              styles: {
-                top: 'calc(50% + 50px - 1rem)',
-                right: 'min(50px, 5%)',
-              },
-            },
-            {
-              placement: 'left',
-              styles: {
-                top: 'calc(50% - 10px - 1rem)',
-                left: 'min(50px, 5%)',
-              },
-            },
-            {
-              placement: 'left-start',
-              styles: {
-                top: 'calc(50% - 70px - 1rem)',
-                left: 'min(50px, 5%)',
-              },
-            },
-            {
-              placement: 'left-end',
-              styles: {
-                top: 'calc(50% + 50px - 1rem)',
-                left: 'min(50px, 5%)',
-              },
-            },
-          ].map(({placement: p, styles}) => (
-            <button
-              key={p}
-              className="p-4 absolute transition hover:scale-125"
-              style={styles}
-              onClick={() => setPlacement(p)}
-              aria-label={p}
-            >
-              <div
-                className={cn(
-                  'w-5 h-5 rounded-full border-2 border-solid',
-                  {
-                    'border-gray-800': placement === p,
-                    'border-gray-900': placement !== p,
-                    'bg-gray-800': placement === p,
-                  }
-                )}
-              />
-            </button>
-          ))}
-          <Floating
-            content={
-              <div
-                className="font-bold text-center"
-                style={{
-                  minWidth:
-                    ['top', 'bottom'].includes(
-                      placement.split('-')[0]
-                    ) && placement.includes('-')
-                      ? '8rem'
-                      : undefined,
-                }}
-              >
-                {placement}
-              </div>
-            }
-            placement={placement}
-            middleware={[{name: 'offset', options: 5}]}
-          >
-            <Reference />
-          </Floating>
-        </Chrome>
-      }
-    />
-  );
-}
-
-function Shift() {
-  const [boundary, setBoundary] = useState();
-
-  useIsomorphicLayoutEffect(() => {
-    if (boundary) {
-      boundary.firstElementChild.scrollTop = 200;
-    }
-  }, [boundary]);
-
-  return (
-    <GridItem
-      title="Shift"
-      titleClass="text-blue-600 dark:text-blue-300"
-      description="Shifts your floating element to keep it in view."
-      demoLink="https://codesandbox.io/s/great-lake-5l7m95?file=/src/index.js"
-      chrome={
-        <div
-          ref={setBoundary}
-          className="relative overflow-hidden"
-        >
-          <Chrome
-            label="Scroll the container"
-            scrollable
-            relative={false}
-          >
-            <Floating
-              placement="right"
-              middleware={[
-                {name: 'offset', options: 5},
-                {
-                  name: 'shift',
-                  options: {
-                    boundary,
-                    rootBoundary: 'document',
-                    padding: {top: 54, bottom: 5},
-                  },
-                },
-              ]}
-              content={
-                <div className="w-24">
-                  <h3 className="font-bold text-xl">Popover</h3>
-                  <p className="text-sm">
-                    Lorem ipsum dolor sit amet, consectetur
-                    adipiscing elit. Nullam vitae pellentesque
-                    elit, in dapibus enim.
-                  </p>
-                </div>
-              }
-            >
-              <Reference className="ml-[5%] sm:ml-[33%]" />
-            </Floating>
-          </Chrome>
-        </div>
-      }
-    />
-  );
-}
-
-function Flip() {
-  const [boundary, setBoundary] = useState();
-
-  useIsomorphicLayoutEffect(() => {
-    if (boundary) {
-      boundary.firstElementChild.scrollTop = 275;
-    }
-  }, [boundary]);
-
-  return (
-    <GridItem
-      title="Flip"
-      titleClass="text-red-500 dark:text-red-300"
-      description="Changes the placement of your floating element to keep it in view."
-      demoLink="https://codesandbox.io/s/beautiful-kirch-th1e0j?file=/src/index.js"
-      chrome={
-        <div
-          className="relative overflow-hidden"
-          ref={setBoundary}
-        >
-          <Chrome label="Scroll the container" scrollable center>
-            <Floating
-              content={<strong>Tooltip</strong>}
-              middleware={[
-                {name: 'offset', options: 5},
-                {
-                  name: 'flip',
-                  options: {rootBoundary: 'document'},
-                },
-              ]}
-              transition
-            >
-              <Reference />
-            </Floating>
-          </Chrome>
-        </div>
-      }
-    />
-  );
-}
-
-function Size() {
-  return (
-    <GridItem
-      title="Size"
-      titleClass="text-green-500 dark:text-green-300"
-      description="Changes the size of your floating element to keep it in view."
-      demoLink="https://codesandbox.io/s/focused-hamilton-qez78d?file=/src/index.js"
-      chrome={
-        <Chrome label="Scroll the container" scrollable center>
-          <Floating
-            content={
-              <div className="grid items-center font-bold">
-                Dropdown
-              </div>
-            }
-            middleware={[
-              {name: 'offset', options: 5},
-              {
-                name: 'size',
-                options: {padding: 8, rootBoundary: 'document'},
-              },
-            ]}
-            tooltipStyle={{
-              height: 300,
-              overflow: 'hidden',
-              maxHeight: 0,
-            }}
-          >
-            <Reference />
-          </Floating>
-        </Chrome>
-      }
-    />
-  );
-}
-
-function Arrow() {
-  const [boundary, setBoundary] = useState();
-
-  return (
-    <GridItem
-      title="Arrow"
-      titleClass="text-yellow-500 dark:text-yellow-300"
-      description="Dynamically positions an arrow element that is center-aware."
-      demoLink="https://codesandbox.io/s/interesting-wescoff-6e1w5i?file=/src/index.js"
-      chrome={
-        <div
-          ref={setBoundary}
-          className="grid lg:col-span-5 relative overflow-hidden"
-        >
-          <Chrome
-            label="Scroll the container"
-            scrollable
-            relative={false}
-          >
-            <Floating
-              placement="right"
-              content={<div className="w-24 h-[18.3rem]" />}
-              middleware={[
-                {name: 'offset', options: 16},
-                {
-                  name: 'shift',
-                  options: {
-                    boundary,
-                    padding: {
-                      top: 54,
-                      bottom: 5,
-                    },
-                    rootBoundary: 'document',
-                  },
-                },
-              ]}
-              arrow
-              lockedFromArrow
-            >
-              <Reference className="ml-[5%] md:ml-[33%]" />
-            </Floating>
-          </Chrome>
-        </div>
-      }
-    />
-  );
-}
-
-function Virtual() {
-  const [open, setOpen] = useState(false);
-  const boundaryRef = useRef();
-  const {x, y, reference, floating, refs, update} = useFloating({
-    placement: 'top',
-    middleware: [
-      shift({
-        crossAxis: true,
-        padding: 5,
-        rootBoundary: 'document',
-      }),
-    ],
-  });
-
-  const handleMouseMove = useCallback(
-    ({clientX, clientY}) => {
-      reference({
-        getBoundingClientRect() {
-          return {
-            width: 0,
-            height: 0,
-            x: clientX,
-            y: clientY,
-            left: clientX,
-            top: clientY,
-            right: clientX,
-            bottom: clientY,
-          };
-        },
-      });
-    },
-    [reference]
-  );
+  const [animate, setAnimate] = useState(true);
+  const [hideBanner, setHideBanner] = useState(true);
+  const [year, setYear] = useState(null);
 
   useEffect(() => {
-    const boundary = boundaryRef.current;
-    boundary.addEventListener('mousemove', handleMouseMove);
-
-    const parents = getOverflowAncestors(refs.floating.current);
-    parents.forEach((parent) => {
-      parent.addEventListener('scroll', update);
-    });
-
-    return () => {
-      boundary.removeEventListener('mousemove', handleMouseMove);
-      parents.forEach((parent) => {
-        parent.removeEventListener('scroll', update);
-      });
-    };
-  }, [reference, refs.floating, update, handleMouseMove]);
-
-  return (
-    <GridItem
-      title="Virtual"
-      description="Anchor relative to any coordinates, such as your mouse cursor."
-      demoLink="https://codesandbox.io/s/fancy-worker-xkr8xl?file=/src/index.js"
-      chrome={
-        <Chrome label="Move your mouse">
-          <div
-            ref={boundaryRef}
-            className="h-full"
-            onMouseEnter={(event) => {
-              handleMouseMove(event);
-              setOpen(true);
-            }}
-            onMouseLeave={() => setOpen(false)}
-          >
-            <div
-              ref={floating}
-              className="bg-gray-800 text-gray-50 font-bold p-4 rounded"
-              style={{
-                position: 'absolute',
-                top: y ?? 0,
-                left: Math.round(x) ?? 0,
-                transform: `scale(${open ? '1' : '0'})`,
-                opacity: open ? '1' : '0',
-                transition:
-                  'transform 0.2s ease, opacity 0.1s ease',
-              }}
-            >
-              Tooltip
-            </div>
-          </div>
-        </Chrome>
-      }
-    />
-  );
-}
-
-function HomePage() {
-  const bannerRef = useRef();
-  const [hideBanner, setHideBanner] = useState(true);
+    setYear(new Date().getFullYear());
+  }, []);
 
   useEffect(() => {
     bannerRef.current.src = '/floating-ui.jpg';
   }, []);
 
+  useEffect(() => {
+    const logo = logoRef.current;
+    const io = new IntersectionObserver(([entry]) => {
+      setAnimate(entry.isIntersecting);
+    });
+    io.observe(logo);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <>
+    <div data-fade={pageTransitionStatus}>
       <Head>
         <link rel="preload" as="image" href="/floating-ui.jpg" />
         <title>
@@ -517,15 +85,106 @@ function HomePage() {
           more
         </title>
       </Head>
-      <header className="from-gray-700 to-gray-800 mb-12 overflow-hidden relative pb-16 bg-gray-900">
-        <div className="container pt-16 mx-auto text-center max-w-screen-xl">
-          <Logo
-            className="mx-auto"
+      <header className="font-satoshi relative overflow-hidden bg-gray-900 pb-16">
+        <div className="container mx-auto max-w-screen-xl bg-[#202028] pt-16 text-center">
+          <svg
+            ref={logoRef}
+            width="140"
+            height="230"
+            viewBox="0 0 300 467"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className={cn('relative z-10 mx-auto', {
+              'animate-float': animate,
+            })}
             aria-label="Floating UI logo (a cute smiling red balloon)"
-            style={{position: 'relative', zIndex: 1}}
-          />
+          >
+            <path
+              d="M142 348.5C141 361.167 141.6 390.3 152 405.5C165 424.5 178 456.5 181 464.5"
+              stroke="black"
+              strokeWidth="5"
+              strokeLinecap="round"
+              className={cn({
+                'animate-string': animate,
+              })}
+              style={{transformOrigin: '40% 92%'}}
+            />
+            <path
+              d="M140.844 339.077C142.001 337.094 144.867 337.094 146.025 339.077L151.297 348.107C152.465 350.107 151.022 352.62 148.706 352.62H138.162C135.846 352.62 134.404 350.107 135.572 348.107L140.844 339.077Z"
+              fill="#AD3A56"
+            />
+            <path
+              d="M300 161.326C300 251.5 220.707 328.146 143.939 343.13C66.6667 329.145 4.0404 244.736 -1.52588e-05 158.329C1.54128e-07 64.93 76.2185 0 154.04 0C231.862 0 300 63.4316 300 161.326Z"
+              fill="url(#paint0_radial_201_2)"
+            />
+            <ellipse
+              cx="76.7677"
+              cy="184.801"
+              rx="25.2525"
+              ry="24.9731"
+              fill="#CD0031"
+              fillOpacity="0.5"
+            />
+            <ellipse
+              cx="214.141"
+              cy="184.801"
+              rx="25.2525"
+              ry="24.9731"
+              fill="#CD0031"
+              fillOpacity="0.4"
+            />
+            <ellipse
+              cx="191.919"
+              cy="163.823"
+              rx="13.1313"
+              ry="12.986"
+              fill="#222222"
+            />
+            <ellipse
+              cx="98.9899"
+              cy="163.823"
+              rx="13.1313"
+              ry="12.986"
+              fill="#222222"
+            />
+            <mask
+              id="mask0_201_2"
+              style={{maskType: 'alpha'}}
+              maskUnits="userSpaceOnUse"
+              x="123"
+              y="180"
+              width="46"
+              height="32"
+            >
+              <path
+                d="M123.232 183.805C123.232 182.148 124.575 180.805 126.232 180.805H165.687C167.344 180.805 168.687 182.148 168.687 183.805V208.772C168.687 210.429 167.344 211.772 165.687 211.772H126.232C124.575 211.772 123.232 210.429 123.232 208.772V183.805Z"
+                fill="#C4C4C4"
+              />
+            </mask>
+            <g mask="url(#mask0_201_2)">
+              <path
+                d="M168.687 182.304C168.687 194.717 158.512 204.779 145.96 204.779C133.408 204.779 123.232 194.717 123.232 182.304C123.232 169.891 133.408 159.828 145.96 159.828C158.512 159.828 168.687 169.891 168.687 182.304Z"
+                fill="#222222"
+              />
+            </g>
+            <defs>
+              <radialGradient
+                id="paint0_radial_201_2"
+                cx="0"
+                cy="0"
+                r="1"
+                gradientUnits="userSpaceOnUse"
+                gradientTransform="translate(32.3232 221.761) rotate(-30.6138) scale(283.446 246.147)"
+              >
+                <stop stopColor="#FF3767" />
+                <stop offset="0.807292" stopColor="#F36D76" />
+                <stop offset="1" stopColor="#FFE1DA" />
+              </radialGradient>
+            </defs>
+          </svg>
+
           <div
-            className="absolute w-full top-[-3rem] overflow-hidden"
+            className="absolute top-[-3rem] w-full overflow-hidden"
             style={{
               left: '50%',
               transform: 'translateX(-50%)',
@@ -542,8 +201,8 @@ function HomePage() {
             <img
               role="presentation"
               ref={bannerRef}
-              className={`transition-all duration-500 select-none absolute top-0${
-                hideBanner ? ' opacity-0 scale-95' : ' scale-100'
+              className={`absolute select-none transition-all duration-500 top-0${
+                hideBanner ? ' scale-95 opacity-0' : ' scale-100'
               }`}
               width={1167}
               height={648}
@@ -553,69 +212,69 @@ function HomePage() {
             />
           </div>
           <Text
-            className="mx-auto relative top-[2rem] z-1"
+            className="z-1 relative top-[2rem] mx-auto"
             aria-label="Floating UI text logo"
           />
 
-          <div className="flex flex-row justify-center gap-x-4 mt-24 z-1 relative">
+          <div className="z-1 relative mt-24 flex flex-row justify-center gap-x-4">
             <Link
               href="/docs/getting-started"
-              className="flex items-center gap-2 transition hover:saturate-110 hover:brightness-110 bg-gradient-to-br from-red-300 via-violet-300 to-cyan-400 shadow-lg hover:shadow-xl rounded text-gray-900 px-4 py-3 sm:text-lg font-bold whitespace-nowrap"
+              className="hover:saturate-110 flex items-center gap-2 whitespace-nowrap rounded bg-gradient-to-br from-red-300 via-violet-300 to-cyan-400 px-4 py-3 font-bold text-gray-900 shadow-lg transition hover:shadow-xl hover:brightness-110 sm:text-lg"
             >
               Get Started <ArrowRight />
             </Link>
             <a
               href="https://github.com/floating-ui/floating-ui"
-              className="flex transition hover:shadow-xl items-center gap-2 bg-gray-50 rounded text-gray-900 px-4 py-3 sm:text-lg shadow-lg font-bold"
+              className="flex items-center gap-2 rounded bg-gray-50 px-4 py-3 font-bold text-gray-900 shadow-lg transition hover:shadow-xl sm:text-lg"
               target="_blank"
               rel="noopener noreferrer"
             >
               <GitHub /> GitHub
             </a>
           </div>
-        </div>
-      </header>
-      <main className="relative">
-        <div className="container mx-auto px-4 md:px-8 max-w-screen-xl">
-          <p className="prose dark:prose-invert text-xl lg:text-2xl text-left lg:leading-relaxed dark:-mt-4">
-            A JavaScript library for{' '}
-            <strong>anchor positioning</strong> — anchor a{' '}
-            <Tippy
-              content={
-                <div className="text-lg p-2">
+          <p className="z-1 relative mx-auto mt-16 px-4 text-center text-xl leading-relaxed text-purple-200 dark:prose-invert lg:text-2xl">
+            A JavaScript library to position{' '}
+            <Tooltip noRest>
+              <TooltipTrigger asChild>
+                <strong
+                  tabIndex={0}
+                  // VoiceOver
+                  role="button"
+                  className="darkLfrom-blue-500 relative cursor-default font-semibold decoration-purple-300/70"
+                  style={{
+                    textDecorationLine: 'underline',
+                    textUnderlineOffset: 8,
+                    textDecorationThickness: 1,
+                  }}
+                >
+                  floating elements
+                </strong>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="p-2 text-lg">
                   A <strong>floating element</strong> is one that
                   floats on top of the UI without disrupting the
                   flow of content, like this one!
                 </div>
-              }
-              theme="light-border"
-              aria={{content: 'labelledby'}}
-              animation="scale-subtle"
-              duration={[450, 125]}
-              inlinePositioning={true}
-              plugins={[inlinePositioning]}
-            >
-              <span
-                tabIndex={0}
-                className="relative text-gray-1000 decoration-gray-1000 dark:text-gray-150 dark:decoration-gray-150"
-                style={{
-                  textDecorationLine: 'underline',
-                  textDecorationStyle: 'wavy',
-                  textUnderlineOffset: 6,
-                  textDecorationThickness: 1,
-                }}
-              >
-                floating element
-              </span>
-            </Tippy>{' '}
-            next to another element while making sure it stays in
-            view optimally. This lets you position tooltips,
-            popovers, or dropdowns to efficiently float on top of
-            the UI!
+              </TooltipContent>
+            </Tooltip>{' '}
+            and create interactions for them.
           </p>
         </div>
-
-        <div className="grid lg:grid-cols-2 gap-4 container md:px-4 py-8 mx-auto max-w-screen-xl">
+      </header>
+      <main className="relative">
+        <div className="font-satoshi container mx-auto max-w-screen-xl px-4 md:px-8">
+          <h2 className="mb-4 mt-12 inline-block bg-gradient-to-br from-rose-400 via-purple-500 to-cyan-500 bg-clip-text py-1 text-3xl font-bold text-transparent dark:mt-0 dark:from-rose-400 dark:via-purple-400 dark:to-cyan-400 lg:mt-16 lg:text-4xl lg:[line-height:3.5rem] dark:lg:mt-4">
+            Smart Anchor Positioning
+          </h2>
+          <p className="prose text-left text-xl dark:prose-invert lg:text-2xl lg:leading-relaxed">
+            Anchor a floating element next to another element
+            while making sure it stays in view by{' '}
+            <strong>avoiding collisions</strong>. This lets you
+            position tooltips, popovers, or dropdowns optimally.
+          </p>
+        </div>
+        <div className="container mx-auto grid max-w-screen-xl gap-4 py-10 md:px-4 lg:grid-cols-2">
           <Placement />
           <Shift />
           <Flip />
@@ -624,126 +283,325 @@ function HomePage() {
           <Virtual />
         </div>
 
-        <div className="container mx-auto px-4 md:px-8 max-w-screen-xl relative">
-          <h2 className="inline-block text-transparent leading-gradient-heading bg-clip-text bg-gradient-to-r from-blue-500 to-teal-400 text-3xl lg:text-4xl font-bold mt-8 mb-4">
-            Light as a feather.
+        <div className="font-satoshi container mx-auto max-w-screen-xl px-4 md:px-8">
+          <h2 className="mb-4 mt-12 inline-block bg-gradient-to-br from-rose-400 via-purple-500 to-cyan-500 bg-clip-text py-1 text-3xl font-bold text-transparent dark:mt-0 dark:from-rose-400 dark:via-purple-400 dark:to-cyan-400 lg:mt-16 lg:text-4xl lg:[line-height:3.5rem] dark:lg:mt-4">
+            Interactions for React
           </h2>
-          <p className="prose dark:prose-invert text-xl lg:text-2xl text-left mb-8 lg:leading-relaxed">
-            This positioning toolkit has a platform-agnostic 0.6
-            kB core (minified + Brotli compressed), with official
-            bindings for the web, React DOM, React Native, and
-            Vue.
+          <p className="prose text-left text-xl dark:prose-invert lg:text-2xl lg:leading-relaxed">
+            Build your own floating UI components with React.
+            From simple tooltips to select menus, you have full
+            control while ensuring{' '}
+            <strong>fully accessible</strong> UI experiences.
           </p>
-          <p className="prose dark:prose-invert text-xl lg:text-2xl text-left mb-8">
-            Each module is fully tree-shakeable by your bundler:
+        </div>
+
+        <div className="container mx-auto mb-12 grid max-w-screen-xl gap-4 py-10 dark:text-black sm:grid-cols-2 md:px-4 lg:grid-cols-3">
+          <div className="flex h-[18rem] flex-col justify-between bg-white p-10 text-center shadow dark:bg-gray-700 dark:text-gray-100 sm:h-[19rem] sm:rounded-lg md:h-[18rem]">
+            <FloatingDelayGroup
+              delay={{open: 1000, close: 150}}
+              timeoutMs={200}
+            >
+              <div>
+                <h3 className="mb-6 text-3xl font-bold">
+                  Tooltips
+                </h3>
+                <p>
+                  Floating elements that display information
+                  related to an anchor element on hover or focus.
+                </p>
+              </div>
+              <div className="flex justify-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      aria-label="Like"
+                      className="rounded-full p-3 hover:text-red-500 dark:hover:text-red-300"
+                    >
+                      <Heart size={26} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Like</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      aria-label="Share"
+                      className="rounded-full p-3 hover:text-blue-500 dark:hover:text-blue-300"
+                    >
+                      <Share size={26} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Share</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      aria-label="Stats"
+                      className="rounded-full p-3 hover:text-orange-500 dark:hover:text-orange-300"
+                    >
+                      <BarChart size={26} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Stats</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      aria-label="Edit"
+                      className="rounded-full p-3 hover:text-green-500 dark:hover:text-green-300"
+                    >
+                      <Edit size={26} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Edit</TooltipContent>
+                </Tooltip>
+              </div>
+            </FloatingDelayGroup>
+          </div>
+
+          <div className="flex h-[18rem] flex-col justify-between bg-white p-10 text-center shadow dark:bg-gray-700 dark:text-gray-100 sm:h-[19rem] sm:rounded-lg md:h-[18rem]">
+            <div>
+              <h3 className="mb-6 text-3xl font-bold">
+                Popovers
+              </h3>
+              <p>
+                Floating elements that display an anchored
+                interactive dialog on click.
+              </p>
+            </div>
+            <div className="flex justify-center gap-1">
+              <PopoverDemo />
+            </div>
+          </div>
+
+          <div className="flex h-[18rem] flex-col justify-between bg-white p-10 text-center shadow dark:bg-gray-700 dark:text-gray-100 sm:h-[19rem] sm:rounded-lg md:h-[18rem]">
+            <div>
+              <h3 className="mb-6 text-3xl font-bold">
+                Select Menus
+              </h3>
+              <p>
+                Floating elements that display a list of options
+                to choose from on click.
+              </p>
+            </div>
+            <div className="flex justify-center gap-1">
+              <SelectDemo />
+            </div>
+          </div>
+
+          <div className="flex h-[18rem] flex-col justify-between bg-white p-10 text-center shadow dark:bg-gray-700 dark:text-gray-100 sm:h-[19rem] sm:rounded-lg md:h-[18rem]">
+            <div>
+              <h3 className="mb-6 text-3xl font-bold">
+                Comboboxes
+              </h3>
+              <p>
+                Floating elements that combine an input and a
+                list of searchable options to choose from.
+              </p>
+            </div>
+            <div className="flex justify-center gap-1">
+              <ComboboxDemo />
+            </div>
+          </div>
+
+          <div className="flex h-[18rem] flex-col justify-between bg-white p-10 text-center shadow dark:bg-gray-700 dark:text-gray-100 sm:h-[19rem] sm:rounded-lg md:h-[18rem]">
+            <div>
+              <h3 className="mb-6 text-3xl font-bold">
+                Dropdown Menus
+              </h3>
+              <p>
+                Floating elements that display a list of buttons
+                that perform an action.
+              </p>
+            </div>
+            <div className="flex justify-center gap-1">
+              <Menu label="Edit balloon">
+                <MenuItem label="Inflate" />
+                <MenuItem label="Deflate" />
+                <MenuItem label="Tie" disabled />
+                <Menu label="Pop with">
+                  <MenuItem label="Knife" />
+                  <MenuItem label="Pin" />
+                  <MenuItem label="Fork" />
+                  <MenuItem label="Sword" />
+                </Menu>
+                <Menu label="Change color to">
+                  <MenuItem label="Blue" />
+                  <MenuItem label="Red" />
+                  <MenuItem label="Green" />
+                </Menu>
+                <Menu label="Transform">
+                  <MenuItem label="Move" />
+                  <MenuItem label="Rotate" />
+                  <MenuItem label="Resize" />
+                </Menu>
+              </Menu>
+            </div>
+          </div>
+
+          <div className="flex h-[18rem] flex-col justify-between bg-white p-10 text-center shadow dark:bg-gray-700 dark:text-gray-100 sm:h-[19rem] sm:rounded-lg md:h-[18rem]">
+            <div>
+              <h3 className="mb-6 text-3xl font-bold">
+                Dialogs
+              </h3>
+              <p>
+                Floating windows overlaid on the UI, rendering
+                content underneath them inert.
+              </p>
+            </div>
+            <div className="flex justify-center gap-1">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>Delete balloon</Button>
+                </DialogTrigger>
+                <DialogContent className="rounded-lg bg-white p-6">
+                  <DialogHeading className="mb-2 text-2xl font-bold">
+                    Delete balloon
+                  </DialogHeading>
+                  <DialogDescription>
+                    Are you sure you want to delete?
+                  </DialogDescription>
+                  <div className="mt-4 flex gap-2">
+                    <DialogClose className="w-full cursor-default rounded-lg bg-red-500 p-2 text-white transition-colors hover:bg-red-600">
+                      Confirm
+                    </DialogClose>
+                    <DialogClose className="w-full cursor-default rounded-lg bg-gray-300 p-2 transition-colors hover:bg-slate-200">
+                      Cancel
+                    </DialogClose>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+        </div>
+
+        <div className="container mx-auto mb-12 max-w-screen-xl px-4 text-center md:px-8 lg:mb-16">
+          <Link
+            href="/docs/react"
+            className="inline-block rounded-md bg-rose-500 p-6 font-bold text-gray-50 transition-colors hover:bg-pink-500 dark:bg-rose-600 sm:text-xl"
+          >
+            Use Floating UI with React{' '}
+            <ArrowRight
+              className="relative top-[-1px] inline-block"
+              size={20}
+            />
+          </Link>
+        </div>
+
+        <div className="container relative mx-auto max-w-screen-xl px-4 md:px-8">
+          <h2 className="mb-4 mt-12 inline-block bg-gradient-to-br from-rose-400 via-purple-500 to-cyan-500 bg-clip-text py-1 text-3xl font-bold text-transparent dark:mt-0 dark:from-rose-400 dark:via-purple-400 dark:to-cyan-400 lg:mt-16 lg:text-4xl lg:[line-height:3.5rem] dark:lg:mt-4">
+            Tree-shakeable & Platform-agnostic
+          </h2>
+          <p className="font-satoshi prose mb-8 text-left text-xl dark:prose-invert lg:text-2xl lg:leading-relaxed">
+            In addition to official bindings for the web, React
+            DOM, React Native, and Vue, Floating UI also supports{' '}
+            <code className="p-0">
+              <span className="text-cyan-600 dark:text-cyan-300">
+                &lt;
+              </span>
+              <span className="text-red-600 dark:text-red-400">
+                canvas
+              </span>
+              <span className="text-cyan-600 dark:text-cyan-300">
+                &gt;
+              </span>
+            </code>
+            , and each module is{' '}
+            <a
+              href="https://bundlejs.com/?q=%40floating-ui%2Fdom&treeshake=%5B%7B%0A++computePosition%2Cshift%2ClimitShift%2Cflip%2Chide%2Coffset%2Carrow%2CautoPlacement%2Csize%2Cinline%2CautoUpdate%0A%7D%5D&config=%7B%22compression%22%3A%22brotli%22%7D"
+              className="font-bold text-rose-600 underline decoration-rose-500/80 decoration-2 underline-offset-4 transition-colors hover:text-gray-1000 hover:decoration-gray-1000 dark:text-rose-300 dark:decoration-rose-300/80 dark:hover:text-gray-50 dark:hover:decoration-gray-50"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              fully tree-shakeable
+            </a>{' '}
+            by your bundler:
           </p>
-          <div className="grid items-center py-8 pb-16">
-            <div className="flex flex-col text-center text-md sm:text-lg md:text-xl mx-auto pr-4 sm:pr-20 md:pr-40">
-              <div className="mb-2 flex gap-2 items-center justify-center">
-                <code className="flex-1 text-blue-600 dark:text-blue-400 text-right">
+          <div className="font-code grid items-center py-8 pb-16">
+            <div className="text-md mx-auto flex flex-col pr-4 text-center sm:pr-20 sm:text-lg md:pr-40 md:text-xl">
+              <div className="mb-2 flex items-center justify-center gap-2">
+                <code className="flex-1 text-right text-blue-600 dark:text-blue-400">
                   computePosition
                   <span className="text-cyan-500 dark:text-cyan-200">
                     ()
                   </span>
                 </code>
-                <span className="text-md text-gray-600 dark:text-gray-400 text-left [font-variant-numeric:tabular-nums]">
+                <span className="text-md text-left text-gray-600 [font-variant-numeric:tabular-nums] dark:text-gray-400">
                   <span className="invisible">+</span>0.6 kB
                 </span>
               </div>
               {[
                 {name: 'shift', size: '0.6 kB'},
                 {name: 'limitShift', size: '0.2 kB'},
-                {name: 'flip', size: '0.5 kB'},
+                {name: 'flip', size: '0.8 kB'},
                 {name: 'hide', size: '0.2 kB'},
                 {name: 'offset', size: '0.1 kB'},
+                {name: 'arrow', size: '0.5 kB'},
                 {name: 'autoPlacement', size: '0.4 kB'},
                 {name: 'size', size: '0.3 kB'},
                 {name: 'inline', size: '0.6 kB'},
+                {name: 'autoUpdate', size: '0.3 kB'},
               ].map(({name, size}) => (
                 <div
-                  className="mb-2 flex gap-2 items-center justify-center"
+                  className="mb-2 flex items-center justify-center gap-2"
                   key={name}
                 >
-                  <code className="flex-1 text-blue-600 dark:text-blue-400 text-right">
+                  <code className="flex-1 text-right text-blue-600 dark:text-blue-400">
                     {name}
                     <span className="text-cyan-500 dark:text-cyan-200">
                       ()
                     </span>
                   </code>
-                  <span className="text-md text-green-600 dark:text-green-400 text-left [font-variant-numeric:tabular-nums]">
+                  <span className="text-md text-left text-green-700 [font-variant-numeric:tabular-nums] dark:text-green-400">
                     +{size}
                   </span>
                 </div>
               ))}
-              <div className="mb-2 flex gap-3 items-center justify-center">
-                <code className="flex-1 text-gray-600 dark:text-gray-400 text-right">
+              <div className="mb-2 flex items-center justify-center gap-3">
+                <code className="flex-1 text-right text-gray-600 dark:text-gray-400">
                   DOM platform
                 </code>
-                <span className="text-md text-yellow-600 dark:text-yellow-400 text-left [font-variant-numeric:tabular-nums]">
-                  +2.2 kB
+                <span className="text-md text-left text-yellow-700 [font-variant-numeric:tabular-nums] dark:text-yellow-400">
+                  +2.5 kB
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="container mx-auto px-4 md:px-8 max-w-screen-xl relative mb-24">
-          <h2 className="inline-block text-transparent leading-gradient-heading bg-clip-text bg-gradient-to-r from-rose-500 dark:from-rose-400 to-pink-500 dark:to-pink-400 text-3xl lg:text-4xl font-bold mt-8 mb-4">
-            Interactions for React.
+        <div className="font-satoshi container mx-auto max-w-screen-xl px-4 md:px-8">
+          <h2 className="mb-4 mt-12 inline-block bg-gradient-to-br from-rose-400 via-purple-500 to-cyan-500 bg-clip-text py-1 text-3xl font-bold text-transparent dark:mt-0 dark:from-rose-400 dark:via-purple-400 dark:to-cyan-400 lg:mt-16 lg:text-4xl lg:[line-height:3.5rem] dark:lg:mt-4">
+            Support Floating UI
           </h2>
-          <p className="prose dark:prose-invert text-xl lg:text-2xl text-left mb-12 lg:leading-relaxed">
-            In addition to positioning, there are also
-            interaction primitives to build floating UI
-            components with React. This includes event hooks for
-            hover, focus or click, modal and non-modal focus
-            management, keyboard list navigation, typeahead,
-            portals, backdrop overlays, screen reader support,
-            and more.
-          </p>
-          <Link
-            href="/docs/react"
-            className="transition-colors bg-rose-500 dark:bg-rose-600 hover:bg-pink-500 text-gray-50 p-4 rounded-md font-bold text-md"
-          >
-            Use Floating UI with React{' '}
-            <ArrowRight
-              className="inline-block relative top-[-1px]"
-              size={20}
-            />
-          </Link>
-        </div>
-
-        <div className="container px-4 md:px-8 mx-auto max-w-screen-xl">
-          <h2 className="inline-block text-3xl lg:text-4xl dark:text-gray-50 font-bold mt-8 mb-4">
-            Support Floating UI!
-          </h2>
-          <p className="prose dark:prose-invert text-xl lg:text-2xl text-left mb-8 lg:leading-relaxed">
+          <p className="prose mb-8 text-left text-xl dark:prose-invert lg:text-2xl lg:leading-relaxed">
             Floating UI is free and open source, proudly
             sponsored by the following organizations — consider
             joining them on{' '}
             <a
-              className="transition-colors underline underline-offset-4 font-bold text-rose-500 dark:text-rose-300 hover:text-gray-1000 decoration-rose-500/80 dark:decoration-rose-300/80 hover:decoration-gray-1000 dark:hover:text-gray-50 dark:hover:decoration-gray-50 decoration-2"
+              className="font-bold text-rose-600 underline decoration-rose-500/80 decoration-2 underline-offset-4 transition-colors hover:text-gray-1000 hover:decoration-gray-1000 dark:text-rose-300 dark:decoration-rose-300/80 dark:hover:text-gray-50 dark:hover:decoration-gray-50"
               href="https://opencollective.com/floating-ui"
+              target="_blank"
               rel="noopener noreferrer"
             >
               Open Collective
             </a>
             .
           </p>
-          <Cards items={SPONSORS} />
-          <Logos items={MINI_SPONSORS} />
+          <Cards items={sponsors.website} />
+          <Logos items={sponsors.mini} />
         </div>
 
-        <div className="container mx-auto px-4 md:px-8 max-w-screen-xl relative">
-          <h2 className="inline-block text-3xl lg:text-4xl dark:text-gray-50 leading-gradient-heading font-bold mb-4 mt-16">
-            Ready to install?
+        <div className="container relative mx-auto max-w-screen-xl px-4 md:px-8">
+          <h2 className="mb-4 mt-12 inline-block bg-gradient-to-br from-rose-400 via-purple-500 to-cyan-500 bg-clip-text py-1 text-3xl font-bold text-transparent dark:mt-0 dark:from-rose-400 dark:via-purple-400 dark:to-cyan-400 lg:mt-16 lg:text-4xl lg:[line-height:3.5rem] dark:lg:mt-4">
+            Install
           </h2>
-          <p className="prose dark:prose-invert text-xl lg:text-2xl text-left mb-8 lg:leading-relaxed">
+          <p className="font-satoshi prose mb-8 text-left text-xl dark:prose-invert lg:text-2xl lg:leading-relaxed">
             Start playing via your package manager or CDN.
           </p>
 
-          <div className="grid lg:grid-cols-2 gap-4">
-            <div className="border dark:border-gray-200 dark:text-gray-100 rounded-lg py-8 px-12">
-              <h3 className="text-2xl font-bold mb-4">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-lg bg-white p-8 shadow dark:bg-gray-700 dark:text-gray-100">
+              <h3 className="mb-4 text-2xl font-bold">
                 Package Manager
               </h3>
               <p className="text-lg">
@@ -751,19 +609,19 @@ function HomePage() {
               </p>
               <Link
                 href="/docs/getting-started"
-                className="text-xl font-bold flex gap-2 items-center mt-4 text-rose-500 dark:text-rose-300"
+                className="mt-4 flex items-center gap-2 text-xl font-bold text-rose-600 dark:text-rose-300"
               >
                 Get started <ArrowRight />
               </Link>
             </div>
-            <div className="border dark:border-gray-200 dark:text-gray-100 rounded-lg py-8 px-12">
-              <h3 className="text-2xl font-bold mb-4">CDN</h3>
+            <div className="rounded-lg bg-white p-8 shadow dark:bg-gray-700 dark:text-gray-100">
+              <h3 className="mb-4 text-2xl font-bold">CDN</h3>
               <p className="text-lg">
                 Install with the jsDelivr CDN.
               </p>
               <Link
                 href="/docs/getting-started#cdn"
-                className="text-xl font-bold flex gap-2 items-center mt-4 text-rose-500 dark:text-rose-300"
+                className="mt-4 flex items-center gap-2 text-xl font-bold text-rose-600 dark:text-rose-300"
               >
                 Get started <ArrowRight />
               </Link>
@@ -772,11 +630,11 @@ function HomePage() {
         </div>
       </main>
 
-      <footer className="text-center dark:text-gray-500 bg-gray-50 dark:bg-gray-1000 mt-16 py-8">
-        <div className="flex flex-col gap-3 container mx-auto px-4 max-w-screen-xl">
+      <footer className="mt-16 bg-gray-50 py-8 text-center shadow dark:border-t dark:border-gray-800 dark:bg-transparent dark:text-gray-500">
+        <div className="container mx-auto flex max-w-screen-xl flex-col gap-3 px-4">
           <p>
-            <strong>
-              © {new Date().getFullYear()} • MIT License
+            <strong className="font-semibold">
+              © {year && `${year} •`} MIT License
             </strong>
           </p>
           <p className="dark:text-gray-400">
@@ -787,14 +645,14 @@ function HomePage() {
             Floating shapes in the header are licensed under CC
             BY from{' '}
             <a
-              className="font-bold text-rose-500 dark:text-rose-300"
+              className="font-semibold text-rose-600 dark:text-rose-300"
               href="https://www.figma.com/@killnicole"
             >
               Vic
             </a>{' '}
             and{' '}
             <a
-              className="font-bold text-rose-500 dark:text-rose-300"
+              className="font-semibold text-rose-600 dark:text-rose-300"
               href="https://www.figma.com/@Artstar3d"
             >
               Lisa Star
@@ -806,7 +664,7 @@ function HomePage() {
               href="https://www.netlify.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-bold text-rose-500 dark:text-rose-300"
+              className="font-semibold text-rose-600 dark:text-rose-300"
             >
               This site is powered by Netlify
             </a>
@@ -814,8 +672,24 @@ function HomePage() {
           </p>
         </div>
       </footer>
-    </>
+    </div>
   );
 }
 
 export default HomePage;
+
+export async function getStaticProps() {
+  const sponsors = await Promise.all([
+    getTierSponsors('floating-ui', 'Website Sponsor'),
+    getTierSponsors('floating-ui', 'Mini Sponsor'),
+  ]);
+
+  return {
+    props: {
+      sponsors: {
+        website: sponsors[0],
+        mini: sponsors[1],
+      },
+    },
+  };
+}

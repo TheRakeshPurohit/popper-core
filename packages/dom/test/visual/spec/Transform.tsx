@@ -1,5 +1,6 @@
-import {useFloating, shift, autoUpdate} from '@floating-ui/react-dom';
-import {useState, useLayoutEffect, useRef} from 'react';
+import {autoUpdate, shift, useFloating} from '@floating-ui/react-dom';
+import {useLayoutEffect, useRef, useState} from 'react';
+
 import {Controls} from '../utils/Controls';
 
 // The element rect is black, while the clipping rect is blue.
@@ -54,7 +55,7 @@ const NODES: Node[] = [
 
 export function Transform() {
   const [node, setNode] = useState<Node>(null);
-  const {x, y, reference, floating, strategy, update} = useFloating({
+  const {x, y, refs, strategy, update} = useFloating({
     middleware: [shift({crossAxis: true})],
     whileElementsMounted: autoUpdate,
   });
@@ -97,9 +98,9 @@ export function Transform() {
     if (node === 'virtual' && element) {
       element.style.transform = 'scale(0.5)';
       const virtualContext = document.querySelector(
-        '#virtual-context'
+        '#virtual-context',
       ) as HTMLElement;
-      reference({
+      refs.setReference({
         getBoundingClientRect: () => virtualContext.getBoundingClientRect(),
         contextElement: virtualContext,
       });
@@ -112,7 +113,7 @@ export function Transform() {
         element.style.transform = '';
       }
     };
-  }, [node, update, reference]);
+  }, [node, update, refs]);
 
   return (
     <>
@@ -138,7 +139,7 @@ export function Transform() {
             />
           )}
           <div
-            ref={reference}
+            ref={refs.setReference}
             className="reference"
             style={{
               transform: node?.includes('reference')
@@ -149,7 +150,7 @@ export function Transform() {
             Reference
           </div>
           <div
-            ref={floating}
+            ref={refs.setFloating}
             className="floating"
             style={{
               position: strategy,

@@ -1,21 +1,62 @@
+<PageCard>
+
 # computePosition
 
-This is an async function that computes and returns x and y
-coordinates to position a floating element next to a reference
-element. [autoUpdate](/docs/autoUpdate) is used with it to ensure
-the floating element remains "anchored" to its reference element.
+Computes coordinates to position a floating element next to
+another element.
+
+<ShowFor packages={['core']}>
+
+```js
+import {computePosition} from '@floating-ui/core';
+```
+
+</ShowFor>
+
+<ShowFor packages={['dom']}>
+
+```js
+import {computePosition} from '@floating-ui/dom';
+```
+
+</ShowFor>
+
+<ShowFor packages={['react', 'react-dom', 'react-native', 'vue']}>
+  <Notice type="warning" title="Non-framework API">
+    `useFloating(){:js}` should be used instead with a framework. 
+    If you are using a base package, change the package with the red package 
+    switcher at the top of the page.
+  </Notice>
+</ShowFor>
+
+</PageCard>
 
 ## Usage
 
-The function works with two elements:
+At its most basic, the function accepts two elements:
 
 - **Reference element** — also known as the anchor element, this
   is the element that is being _referred_ to for positioning.
-  Often this is a button that triggers a popup like a tooltip or
-  menu.
+  Often this is a button that triggers a floating popover like a
+  tooltip or menu.
 - **Floating element** — this is the element that floats next to
   the reference element, remaining anchored to it. This is the
-  popup or tooltip itself.
+  popover or tooltip itself.
+
+<ShowFor packages={['core', 'react-native']}>
+
+```js
+const referenceEl = {width: 100, height: 100, x: 50, y: 50};
+const floatingEl = {width: 200, height: 200, x: 0, y: 0};
+```
+
+Then, call `computePosition(){:js}` with them as arguments,
+ensuring you pass the required
+[platform methods](/docs/platform#methods).
+
+</ShowFor>
+
+<ShowFor packages={['dom', 'react-dom' ,'react', 'vue']}>
 
 ```html
 <button id="button">My reference element</button>
@@ -38,19 +79,39 @@ the UI with layout ready for being measured:
 }
 ```
 
-<Notice>
-  These styles are explained below in [Initial
-  layout](/docs/computePosition#initial-layout).
-</Notice>
-
 Then, ensuring that these two elements are rendered onto the
 document and can be measured, call `computePosition(){:js}` with
 them as arguments.
 
-The first argument is the reference to anchor to, and the second
-is the floating element to be positioned.
+</ShowFor>
 
-```js /button/ /tooltip/
+The first argument is the <WordHighlight id="a">reference
+element</WordHighlight> to anchor to, and the second argument is
+the <WordHighlight id="b">floating element</WordHighlight> to be
+positioned.
+
+<ShowFor packages={['core', 'react-native']}>
+
+```js /button/1,3#a /tooltip/1,3-4#b
+import {computePosition} from '@floating-ui/core';
+
+const referenceEl = {width: 100, height: 100, x: 50, y: 50};
+const floatingEl = {width: 200, height: 200, x: 0, y: 0};
+
+computePosition(referenceEl, floatingEl, {
+  platform: {
+    // See https://floating-ui.com/docs/platform
+  },
+}).then(({x, y}) => {
+  // Paint the screen.
+});
+```
+
+</ShowFor>
+
+<ShowFor packages={['dom', 'react-dom', 'react', 'vue']}>
+
+```js /button/1,3#a /tooltip/1,3-4#b
 import {computePosition} from '@floating-ui/dom';
 
 const button = document.querySelector('#button');
@@ -64,12 +125,16 @@ computePosition(button, tooltip).then(({x, y}) => {
 });
 ```
 
+</ShowFor>
+
 `computePosition(){:js}` returns a `Promise{:.class}` that
 resolves with the coordinates that can be used to apply styles to
 the floating element.
 
 By default, the floating element will be placed at the bottom
 center of the reference element.
+
+<ShowFor packages={['dom', 'react-dom', 'react', 'vue']}>
 
 ### Initial layout
 
@@ -80,12 +145,21 @@ positioned.
 Certain CSS styles must be applied **before**
 `computePosition(){:js}` is called:
 
+```css {2-5}
+#floating {
+  position: absolute;
+  width: max-content;
+  top: 0;
+  left: 0;
+}
+```
+
 - `position: absolute{:sass}`
 
 This makes the element float on top of the UI with intrinsic
 dimensions based on the content, instead of acting as a block.
-The `top{:.objectKey}` and `left{:.objectKey}` coordinates can
-then take effect.
+The `top{:.key}` and `left{:.key}` coordinates can then take
+effect.
 
 - `width: max-content{:sass}` (or a fixed value)
 - `top: 0{:sass}`
@@ -99,6 +173,31 @@ This lets you place the floating element anywhere in the DOM tree
 and have it be positioned correctly, regardless of the CSS styles
 of any ancestor containers.
 
+## Anchoring
+
+Since `computePosition(){:js}` is only a single function call, it
+only positions the floating element once.
+
+To ensure it remains anchored to the reference element in a
+variety of scenarios, such as when resizing or scrolling, wrap
+the calculation in [`autoUpdate`](/docs/autoUpdate):
+
+```js
+import {computePosition, autoUpdate} from '@floating-ui/dom';
+
+// When the floating element is mounted to the DOM:
+const cleanup = autoUpdate(referenceEl, floatingEl, () => {
+  computePosition(referenceEl, floatingEl).then(({x, y}) => {
+    // ...
+  });
+});
+
+// ...later, when it's removed from the DOM:
+cleanup();
+```
+
+</ShowFor>
+
 ## Options
 
 Passed as a third argument, this is the object to configure the
@@ -110,7 +209,7 @@ computePosition(referenceEl, floatingEl, {
 });
 ```
 
-### placement
+### `placement{:.key}`
 
 Where to place the floating element relative to its reference
 element. By default, this is `'bottom'{:js}`.
@@ -145,11 +244,13 @@ and will adapt to the writing direction (e.g. RTL) as expected.
 
 <Notice>
   You aren't limited to just these 12 placements though.
-  [offset](/docs/offset#creating-custom-placements) allows you to
-  create _any_ placement.
+  [`offset`](/docs/offset#creating-custom-placements) allows you
+  to create _any_ placement.
 </Notice>
 
-### strategy
+<ShowFor packages={['dom', 'react-dom', 'react', 'vue']}>
+
+### `strategy{:.key}`
 
 This is the type of CSS position property to use. Two strings are
 available:
@@ -185,15 +286,16 @@ These strategies are differentiated as follows:
   cases also
   ["break" the floating element out of a clipping ancestor](/docs/misc#clipping).
 
-### middleware
+</ShowFor>
+
+### `middleware{:.key}`
 
 When you want granular control over how the floating element is
 positioned, middleware are used. They read the current
-coordinates, optionally alter them, and/or provide data to the
-consumer.
-
-They compose and work together to produce the final coordinates
-which you receive as `x{:.param}` and `y{:.param}`.
+coordinates, optionally alter them, and/or provide data for
+rendering. They compose and work together to produce the final
+coordinates which you receive as `x{:.param}` and `y{:.param}`
+parameters.
 
 The following are included in the package:
 
@@ -201,31 +303,31 @@ The following are included in the package:
 
 These middleware alter the base placement coordinates.
 
-- [offset](/docs/offset) modifies the placement to add distance
+- [`offset`](/docs/offset) modifies the placement to add distance
   or margin between the reference and floating elements.
 
-- [inline](/docs/inline) positions the floating element relative
-  to individual client rects rather than the bounding box for
-  better precision.
+- [`inline`](/docs/inline) positions the floating element
+  relative to individual client rects rather than the bounding
+  box for better precision.
 
 #### Visibility optimizers
 
 These middleware alter the coordinates to ensure the floating
 element stays on screen optimally.
 
-- [shift](/docs/shift) prevents the floating element from
+- [`shift`](/docs/shift) prevents the floating element from
   overflowing a clipping container by shifting it to stay in
   view.
 
-- [flip](/docs/flip) prevents the floating element from
+- [`flip`](/docs/flip) prevents the floating element from
   overflowing a clipping container by flipping it to the opposite
   placement to stay in view.
 
-- [autoPlacement](/docs/autoPlacement) automatically chooses a
+- [`autoPlacement`](/docs/autoPlacement) automatically chooses a
   placement for you using a "most space" strategy.
 
-- [size](/docs/size) resizes the floating element, for example so
-  it will not overflow a clipping container, or to match the
+- [`size`](/docs/size) resizes the floating element, for example
+  so it will not overflow a clipping container, or to match the
   width of the reference element.
 
 #### Data providers
@@ -233,11 +335,11 @@ element stays on screen optimally.
 These middleware only provide data and do not alter the
 coordinates.
 
-- [arrow](/docs/arrow) provides data to position an inner element
-  of the floating element such that it is centered to its
+- [`arrow`](/docs/arrow) provides data to position an inner
+  element of the floating element such that it is centered to its
   reference element.
 
-- [hide](/docs/hide) provides data to hide the floating element
+- [`hide`](/docs/hide) provides data to hide the floating element
   in applicable situations when it no longer appears attached to
   its reference element due to different clipping contexts.
 
@@ -252,7 +354,7 @@ learn how to create your own.
 Middleware can be called conditionally inside the array inline
 for ergonomics:
 
-```js
+```ts
 // The array can accept `false`, `null`, or `undefined`
 // inside of it. They get filtered out.
 type MiddlewareOption = Array<
@@ -265,11 +367,11 @@ needing the consumer to import middleware themselves:
 
 ```js {5-6}
 function wrapper(referenceEl, floatingEl, options) {
-  computePosition(referenceEl, floatingEl, {
+  return computePosition(referenceEl, floatingEl, {
     ...options,
     middleware: [
-      options.shouldFlip && flip(),
-      options.arrowEl && arrow({element: arrowEl}),
+      options.enableFlip && flip(),
+      options.arrowEl && arrow({element: options.arrowEl}),
     ],
   });
 }
@@ -289,32 +391,25 @@ interface ComputePositionReturn {
 }
 ```
 
-### x
+### `x{:.key}`
 
 The x-coordinate of the floating element.
 
-### y
+### `y{:.key}`
 
 The y-coordinate of the floating element.
 
-### placement
+### `placement{:.key}`
 
 The final placement of the floating element, which may be
 different from the initial or preferred one passed in due to
 middleware modifications. This allows you to know which side the
 floating element is placed at.
 
-### strategy
+### `strategy{:.key}`
 
 The CSS position property to use.
 
-### middlewareData
+### `middlewareData{:.key}`
 
 The data returned by any middleware used.
-
-## Updating
-
-Since `computePosition(){:js}` is only a single function call, it
-only positions your element once. To ensure the floating element
-remains anchored to the reference element in a variety of
-scenarios, use the [autoUpdate](/docs/autoUpdate) utility.

@@ -1,13 +1,6 @@
 {
   "name": "@floating-ui/vue",
-  "version": "0.1.0",
-  "@rollingversions": {
-    "baseVersion": [
-      0,
-      1,
-      0
-    ]
-  },
+  "version": "1.1.6",
   "description": "Floating UI for Vue",
   "publishConfig": {
     "access": "public"
@@ -15,27 +8,35 @@
   "main": "./dist/floating-ui.vue.umd.js",
   "module": "./dist/floating-ui.vue.esm.js",
   "unpkg": "./dist/floating-ui.vue.umd.min.js",
-  "types": "./index.d.ts",
+  "types": "./dist/floating-ui.vue.d.ts",
   "exports": {
+    "./package.json": "./package.json",
     ".": {
-      "types": "./index.d.ts",
+      "import": {
+        "types": "./dist/floating-ui.vue.d.mts",
+        "default": "./dist/floating-ui.vue.mjs"
+      },
+      "types": "./dist/floating-ui.vue.d.ts",
       "module": "./dist/floating-ui.vue.esm.js",
-      "import": "./dist/floating-ui.vue.mjs",
       "default": "./dist/floating-ui.vue.umd.js"
-    },
-    "./package.json": "./package.json"
+    }
   },
   "sideEffects": false,
   "files": [
-    "dist/",
-    "index.d.ts",
-    "src/**/*.d.ts"
+    "dist"
   ],
-  "browserslist": "> 0.5%, not dead, not IE 11",
   "scripts": {
-    "test": "jest test",
-    "build": "NODE_ENV=build rollup -c",
-    "dev": "parcel test/visual/index.html"
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "clean": "rimraf dist out-tsc",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "build": "rollup -c",
+    "build:api": "build-api --tsc tsconfig.lib.json",
+    "dev": "vite",
+    "publint": "publint",
+    "prepack": "compat-exports",
+    "typecheck": "tsc -b"
   },
   "author": "lozinsky",
   "license": "MIT",
@@ -55,34 +56,17 @@
     "positioning",
     "vue"
   ],
-  "peerDependencies": {
-    "@vue/composition-api": "^1.0.0-rc.1",
-    "vue": "^2.0.0 || >=3.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@vue/composition-api": {
-      "optional": true
-    }
-  },
   "dependencies": {
-    "@floating-ui/dom": "^1.0.12",
-    "vue-demi": "^0.13.11"
+    "@floating-ui/dom": "^1.0.0",
+    "@floating-ui/utils": "workspace:^",
+    "vue-demi": ">=0.13.0"
   },
   "devDependencies": {
-    "@babel/preset-env": "^7.20.2",
-    "@babel/preset-typescript": "^7.18.6",
-    "@parcel/transformer-vue": "^2.6.0",
-    "@rollup/plugin-babel": "^5.3.1",
-    "@rollup/plugin-commonjs": "^21.0.1",
-    "@rollup/plugin-node-resolve": "^13.0.6",
-    "@rollup/plugin-replace": "^3.0.0",
+    "@parcel/transformer-vue": "^2.10.3",
+    "@testing-library/jest-dom": "^6.1.6",
     "@testing-library/vue": "^6.6.1",
-    "@types/jest": "^27.0.3",
-    "babel-plugin-annotate-pure-calls": "^0.4.0",
-    "jest": "^27.3.1",
-    "rollup": "^2.79.1",
-    "rollup-plugin-terser": "^7.0.2",
-    "ts-jest": "^27.0.7",
-    "vue": "^3.2.45"
+    "@vitejs/plugin-vue": "^5.0.2",
+    "config": "workspace:*",
+    "vue": "^3.4.4"
   }
 }

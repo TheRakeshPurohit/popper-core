@@ -1,14 +1,9 @@
-import type {
-  ComputePosition,
-  ComputePositionReturn,
-  Middleware,
-  MiddlewareData,
-} from './types';
 import {computeCoordsFromPlacement} from './computeCoordsFromPlacement';
+import type {ComputePosition, Middleware, MiddlewareData} from './types';
 
 /**
  * Computes the `x` and `y` coordinates that will place the floating element
- * next to a reference element when it is given a certain positioning strategy.
+ * next to a given reference element.
  *
  * This export does not have any `platform` interface logic. You will need to
  * write one for the platform you are using Floating UI with.
@@ -16,8 +11,8 @@ import {computeCoordsFromPlacement} from './computeCoordsFromPlacement';
 export const computePosition: ComputePosition = async (
   reference,
   floating,
-  config
-): Promise<ComputePositionReturn> => {
+  config,
+) => {
   const {
     placement = 'bottom',
     strategy = 'absolute',
@@ -27,43 +22,6 @@ export const computePosition: ComputePosition = async (
 
   const validMiddleware = middleware.filter(Boolean) as Middleware[];
   const rtl = await platform.isRTL?.(floating);
-
-  if (__DEV__) {
-    if (platform == null) {
-      console.error(
-        [
-          'Floating UI: `platform` property was not passed to config. If you',
-          'want to use Floating UI on the web, install @floating-ui/dom',
-          'instead of the /core package. Otherwise, you can create your own',
-          '`platform`: https://floating-ui.com/docs/platform',
-        ].join(' ')
-      );
-    }
-
-    if (
-      validMiddleware.filter(
-        ({name}) => name === 'autoPlacement' || name === 'flip'
-      ).length > 1
-    ) {
-      throw new Error(
-        [
-          'Floating UI: duplicate `flip` and/or `autoPlacement` middleware',
-          'detected. This will lead to an infinite loop. Ensure only one of',
-          'either has been passed to the `middleware` array.',
-        ].join(' ')
-      );
-    }
-
-    if (!reference || !floating) {
-      console.error(
-        [
-          'Floating UI: The reference and/or floating element was not defined',
-          'when `computePosition()` was called. Ensure that both elements have',
-          'been created and can be measured.',
-        ].join(' ')
-      );
-    }
-  }
 
   let rects = await platform.getElementRects({reference, floating, strategy});
   let {x, y} = computeCoordsFromPlacement(rects, placement, rtl);
@@ -102,18 +60,6 @@ export const computePosition: ComputePosition = async (
       },
     };
 
-    if (__DEV__) {
-      if (resetCount > 50) {
-        console.warn(
-          [
-            'Floating UI: The middleware lifecycle appears to be running in an',
-            'infinite loop. This is usually caused by a `reset` continually',
-            'being returned without a break condition.',
-          ].join(' ')
-        );
-      }
-    }
-
     if (reset && resetCount <= 50) {
       resetCount++;
 
@@ -133,7 +79,6 @@ export const computePosition: ComputePosition = async (
       }
 
       i = -1;
-      continue;
     }
   }
 

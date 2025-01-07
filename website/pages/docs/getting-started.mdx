@@ -1,58 +1,93 @@
+<PageCard>
+<CircleImage name="getting-started"  />
+
 # Getting Started
 
-Floating UI is a tiny, low-level library for creating "floating"
-elements like tooltips, popovers, dropdowns, menus, and more.
+Floating UI is a library that helps you create "floating"
+elements such as tooltips, popovers, dropdowns, and more.
 
-The library provides two key functionalities:
+</PageCard>
 
-### 1. Anchor positioning
+Two key features are provided:
 
-Anchor a floating element (like a tooltip) to another element
-(like a button) while simultaneously ensuring it stays in view as
-best as possible with collision detection.
+### Positioning
 
-### 2. User interactions for React
+Floating UI provides a toolkit of positioning features that let
+you robustly anchor an absolutely-positioned floating element
+next to a given reference element. For example, a popover floats
+next to and remains anchored to its triggering button, even while
+the page scrolls.
 
-Hooks and components for composing interactions to create
-accessible floating UI components.
+It also provides features to avoid collisions with the viewport,
+as absolute positioning often leads to unwanted overflow
+depending on the location of the positioning reference.
+
+### Interactions
+
+Floating elements have a wide range of different and complex
+interactions. For example, a tooltip's interactions (hover or
+focus to open a label) has little in common with a combobox
+(focus and type to select options) despite them both "floating"
+and anchoring themselves to a trigger.
+
+Floating UI's React package offers a toolkit of primitive Hooks
+and components that let you build reusable floating components
+with complex and accessible interactions.
+
+## Design
+
+Floating UI is designed to be highly modular, so everything is as
+tree-shakeable as possible. You can use as much or as little of
+the library as you want, and your bundle size will adapt.
+
+Floating UI is also designed to be flexible and hackable. You can
+use it with any framework, or even without a framework, or on
+other platforms like React Native. You can also customize it to
+your needs, and won't feel limited in what you can achieve.
 
 ## Install
 
-Floating UI is platform-agnostic and supports a variety of
+To install Floating UI, you can use a package manager like npm or
+a CDN. There are different versions available for different
 platforms.
 
 ### Vanilla
 
-Use on the web with vanilla JavaScript
-([view tutorial](/docs/tutorial)).
+Use on the [web](/docs/computePosition) with vanilla JavaScript
+(`dom` refers to the
+[Document Object Model](https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model)
+to work with HTML/SVG elements).
 
-```shell
+```bash
 npm install @floating-ui/dom
 ```
 
-<Notice>
-  `dom` refers to the [Document Object
-  Model](https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model)
-  to work with HTML/SVG elements.
-</Notice>
-
 ### React
 
-Use with [React DOM](/docs/react) or
-[React Native](/docs/react-native).
+Use with [React](/docs/react).
 
-```shell
-# React DOM — positioning + interactions
+```bash
 npm install @floating-ui/react
 ```
 
-```shell
-# React DOM — positioning only
+<Notice>
+
+A smaller alternative to the above package exists, which only
+wraps `@floating-ui/dom` positioning features without any
+interactions:
+
+```bash
+# Positioning only (smaller size)
 npm install @floating-ui/react-dom
 ```
 
-```shell
-# React Native — positioning only
+</Notice>
+
+### React Native
+
+Use with [React Native](/docs/react-native).
+
+```bash
 npm install @floating-ui/react-native
 ```
 
@@ -60,7 +95,7 @@ npm install @floating-ui/react-native
 
 Use with [Vue](/docs/vue).
 
-```shell
+```bash
 npm install @floating-ui/vue
 ```
 
@@ -68,12 +103,10 @@ npm install @floating-ui/vue
 
 If you're targeting a platform other than the vanilla DOM (web),
 React, or React Native, you can create your own
-[Platform](/docs/platform).
+[Platform](/docs/platform). This allows you to support things
+like Canvas/WebGL, or other platforms that can run JavaScript.
 
-This allows you to support things like Canvas/WebGL, or other
-platforms that can run JavaScript.
-
-```shell
+```bash
 npm install @floating-ui/core
 ```
 
@@ -96,59 +129,7 @@ import {computePosition} from 'https://cdn.jsdelivr.net/npm/@floating-ui/dom@__D
 
 All exports will be available on `window.FloatingUIDOM{:js}`.
 
-## Package entry points
+## Migration from Popper
 
-<Notice>
-  Using webpack, Vite, or Parcel? Skip this section as modern
-  bundlers handle this for you.
-</Notice>
-
-Floating UI uses `process.env.NODE_ENV{:js}` to determine whether
-your build is in development or production mode. This allows us
-to add console warnings and errors during development to help you
-but ensure they get stripped out in production to keep the bundle
-size small.
-
-This causes an error in Rollup and low/no-build setups. To solve
-this, Floating UI exports browser-ready ES modules. Leverage the
-"browser" package export condition to use these modules.
-
-<details>
-  <summary>Rollup example</summary>
-
-The `browser{:.objectKey}` option in the `nodeResolve(){:js}`
-plugin will select browser versions of packages if available.
-
-```js
-import {nodeResolve} from '@rollup/plugin-node-resolve';
-
-export default {
-  // ...
-  plugins: [
-    nodeResolve({
-      browser: true,
-
-      // Add this line for development config, omit for
-      // production config
-      exportConditions: ['development'],
-    }),
-  ],
-};
-```
-
-You may alternatively use the
-[replace](https://www.npmjs.com/package/@rollup/plugin-replace)
-plugin:
-
-```js
-export default {
-  // ...
-  plugins: [
-    replace({
-      'process.env.NODE_ENV': JSON.stringify('production'),
-    }),
-  ],
-};
-```
-
-</details>
+If you are coming to Floating UI from Popper v2, there is a
+[migration guide available here](/docs/migration).

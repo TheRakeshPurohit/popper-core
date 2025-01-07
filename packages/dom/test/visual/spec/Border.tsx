@@ -1,5 +1,6 @@
 import {useFloating} from '@floating-ui/react-dom';
-import {useState, useLayoutEffect} from 'react';
+import {useLayoutEffect, useState} from 'react';
+
 import {Controls} from '../utils/Controls';
 
 type Node =
@@ -22,7 +23,7 @@ const NODES: Node[] = [
 
 export function Border() {
   const [node, setNode] = useState<Node>(null);
-  const {x, y, reference, floating, strategy, update} = useFloating();
+  const {x, y, strategy, refs, update} = useFloating();
 
   useLayoutEffect(() => {
     let element: HTMLElement | null = null;
@@ -74,14 +75,14 @@ export function Border() {
         }}
       >
         <div
-          ref={reference}
+          ref={refs.setReference}
           className="reference"
           style={{border: node === 'reference' ? '10px solid black' : ''}}
         >
           Reference
         </div>
         <div
-          ref={floating}
+          ref={refs.setFloating}
           className="floating"
           style={{
             position: strategy,

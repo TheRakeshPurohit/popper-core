@@ -1,52 +1,48 @@
+import * as React from 'react';
+import {act, fireEvent, render, screen} from '@testing-library/react';
 import {cloneElement, useState} from 'react';
-import {render, screen, fireEvent} from '@testing-library/react';
-import {
-  useFloating,
-  useInteractions,
-  useHover,
-  useDelayGroupContext,
-  useDelayGroup,
-  FloatingDelayGroup,
-} from '../../src';
-import {act} from '@testing-library/react-hooks';
+import {vi} from 'vitest';
 
-jest.useFakeTimers();
+import {
+  FloatingDelayGroup,
+  useDelayGroup,
+  useFloating,
+  useHover,
+  useInteractions,
+} from '../../src';
+
+vi.useFakeTimers();
 
 interface Props {
   label: string;
-  children: JSX.Element;
+  children: React.JSX.Element;
 }
 
 export const Tooltip = ({children, label}: Props) => {
-  const {delay, setCurrentId} = useDelayGroupContext();
   const [open, setOpen] = useState(false);
 
-  const {x, y, reference, floating, strategy, context} = useFloating({
+  const {x, y, refs, strategy, context} = useFloating({
     open,
-    onOpenChange(open) {
-      setOpen(open);
-      open && setCurrentId(label);
-    },
+    onOpenChange: setOpen,
   });
 
-  const {getReferenceProps} = useInteractions([
-    useHover(context, {delay}),
-    useDelayGroup(context, {id: label}),
-  ]);
+  const {delay} = useDelayGroup(context);
+  const hover = useHover(context, {delay});
+  const {getReferenceProps} = useInteractions([hover]);
 
   return (
     <>
       {cloneElement(
         children,
         getReferenceProps({
-          ref: reference,
+          ref: refs.setReference,
           ...children.props,
-        })
+        }),
       )}
       {open && (
         <div
           data-testid={`floating-${label}`}
-          ref={floating}
+          ref={refs.setFloating}
           style={{
             position: strategy,
             top: y ?? '',
@@ -82,13 +78,13 @@ test('groups delays correctly', async () => {
   fireEvent.mouseEnter(screen.getByTestId('reference-one'));
 
   await act(async () => {
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
   });
 
   expect(screen.queryByTestId('floating-one')).not.toBeInTheDocument();
 
   await act(async () => {
-    jest.advanceTimersByTime(999);
+    vi.advanceTimersByTime(999);
   });
 
   expect(screen.queryByTestId('floating-one')).toBeInTheDocument();
@@ -96,7 +92,7 @@ test('groups delays correctly', async () => {
   fireEvent.mouseEnter(screen.getByTestId('reference-two'));
 
   await act(async () => {
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
   });
 
   expect(screen.queryByTestId('floating-one')).not.toBeInTheDocument();
@@ -105,7 +101,7 @@ test('groups delays correctly', async () => {
   fireEvent.mouseEnter(screen.getByTestId('reference-three'));
 
   await act(async () => {
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
   });
 
   expect(screen.queryByTestId('floating-two')).not.toBeInTheDocument();
@@ -114,13 +110,80 @@ test('groups delays correctly', async () => {
   fireEvent.mouseLeave(screen.getByTestId('reference-three'));
 
   await act(async () => {
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
   });
 
   expect(screen.queryByTestId('floating-three')).toBeInTheDocument();
 
   await act(async () => {
-    jest.advanceTimersByTime(199);
+    vi.advanceTimersByTime(199);
+  });
+
+  expect(screen.queryByTestId('floating-three')).not.toBeInTheDocument();
+});
+
+test('timeoutMs', async () => {
+  function App() {
+    return (
+      <FloatingDelayGroup delay={{open: 1000, close: 100}} timeoutMs={500}>
+        <Tooltip label="one">
+          <button data-testid="reference-one" />
+        </Tooltip>
+        <Tooltip label="two">
+          <button data-testid="reference-two" />
+        </Tooltip>
+        <Tooltip label="three">
+          <button data-testid="reference-three" />
+        </Tooltip>
+      </FloatingDelayGroup>
+    );
+  }
+
+  render(<App />);
+
+  fireEvent.mouseEnter(screen.getByTestId('reference-one'));
+
+  await act(async () => {
+    vi.advanceTimersByTime(1000);
+  });
+
+  fireEvent.mouseLeave(screen.getByTestId('reference-one'));
+
+  expect(screen.queryByTestId('floating-one')).toBeInTheDocument();
+
+  await act(async () => {
+    vi.advanceTimersByTime(499);
+  });
+
+  expect(screen.queryByTestId('floating-one')).not.toBeInTheDocument();
+
+  fireEvent.mouseEnter(screen.getByTestId('reference-two'));
+
+  await act(async () => {
+    vi.advanceTimersByTime(1);
+  });
+
+  expect(screen.queryByTestId('floating-two')).toBeInTheDocument();
+
+  fireEvent.mouseEnter(screen.getByTestId('reference-three'));
+
+  await act(async () => {
+    vi.advanceTimersByTime(1);
+  });
+
+  expect(screen.queryByTestId('floating-two')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('floating-three')).toBeInTheDocument();
+
+  fireEvent.mouseLeave(screen.getByTestId('reference-three'));
+
+  await act(async () => {
+    vi.advanceTimersByTime(1);
+  });
+
+  expect(screen.queryByTestId('floating-three')).toBeInTheDocument();
+
+  await act(async () => {
+    vi.advanceTimersByTime(99);
   });
 
   expect(screen.queryByTestId('floating-three')).not.toBeInTheDocument();

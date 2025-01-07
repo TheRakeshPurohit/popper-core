@@ -1,23 +1,25 @@
+import {render} from '@testing-library/react';
+import {useEffect, useRef, useState} from 'react';
+import {vi} from 'vitest';
+
 import {
   useClick,
+  useDismiss,
   useFloating,
   useFocus,
+  useHover,
   useInnerOffset,
   useInteractions,
   useListNavigation,
   useRole,
-  useDismiss,
-  useHover,
   useTypeahead,
 } from '../../src';
-import {render} from '@testing-library/react';
-import {useEffect, useRef, useState} from 'react';
 
 test('correctly merges functions', () => {
-  const firstInteractionOnClick = jest.fn();
-  const secondInteractionOnClick = jest.fn();
-  const secondInteractionOnKeyDown = jest.fn();
-  const userOnClick = jest.fn();
+  const firstInteractionOnClick = vi.fn();
+  const secondInteractionOnClick = vi.fn();
+  const secondInteractionOnKeyDown = vi.fn();
+  const userOnClick = vi.fn();
 
   function App() {
     const {getReferenceProps} = useInteractions([
@@ -51,12 +53,11 @@ test('correctly merges functions', () => {
 test('does not error with undefined user supplied functions', () => {
   function App() {
     const {getReferenceProps} = useInteractions([{reference: {onClick() {}}}]);
-    return null;
-
     expect(() =>
       // @ts-expect-error
-      getReferenceProps({onClick: undefined}).onClick()
+      getReferenceProps({onClick: undefined}).onClick(),
     ).not.toThrowError();
+    return null;
   }
 
   render(<App />);
@@ -81,6 +82,24 @@ test('does not break props that start with `on`', () => {
   render(<App />);
 });
 
+test('does not break props that return values', () => {
+  function App() {
+    const {getReferenceProps} = useInteractions([]);
+
+    const props = getReferenceProps({
+      // @ts-expect-error
+      onyx: () => 'returned value',
+    });
+
+    // @ts-expect-error
+    expect(props.onyx()).toBe('returned value');
+
+    return null;
+  }
+
+  render(<App />);
+});
+
 test('prop getters are memoized', () => {
   function App() {
     const [open, setOpen] = useState(false);
@@ -88,7 +107,7 @@ test('prop getters are memoized', () => {
     c;
 
     const handleClose = () => () => {};
-    handleClose.__options = {blockPointerEvents: false};
+    handleClose.__options = {blockPointerEvents: true};
 
     const listRef = useRef([]);
     const overflowRef = useRef({top: 0, left: 0, bottom: 0, right: 0});
@@ -121,7 +140,7 @@ test('prop getters are memoized', () => {
           onChange: () => {},
           overflowRef,
         }),
-      ]
+      ],
     );
 
     useEffect(() => {

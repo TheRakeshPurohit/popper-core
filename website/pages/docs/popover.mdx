@@ -15,15 +15,15 @@ element is clicked.
 
 ## Essentials
 
-An accessible popover component has the following:
+An accessible popover component has the following qualities:
 
-- **Dynamic anchor positioning**: The popover will remain
-  attached to its reference element and remain in view for the
-  user regardless of where it is positioned on the screen.
+- **Dynamic anchor positioning**: The popover is positioned next
+  to its reference element, remaining anchored to it while
+  avoiding collisions.
 - **Events**: When the reference element is clicked, it toggles
   the popover open or closed.
 - **Dismissal**: When the user presses the `esc` key or outside
-  the popover while the it is open, it closes.
+  the popover while it is open, it closes.
 - **Role**: The elements are given relevant role and ARIA
   attributes to be accessible to screen readers.
 - **Focus management**: Focus is managed for non-modal or modal
@@ -52,27 +52,28 @@ Let's walk through the example:
 import {useState} from 'react';
 
 function Popover() {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 }
 ```
 
-The `open{:.const}` state determines whether or not the popover
-is currently open on the screen. It is used for conditional
+`isOpen{:.const}` determines whether or not the popover is
+currently open on the screen. It is used for conditional
 rendering.
 
-### useFloating hook
+### useFloating Hook
 
-The `useFloating(){:js}` hook provides positioning and context
+The `useFloating(){:js}` Hook provides positioning and context
 for our popover. We need to pass it some information:
 
-- `open`: The open state from our `useState(){:js}` hook above.
-- `onOpenChange{:.objectKey}`: A callback function that will be
-  called when the popover is opened or closed. We'll use this to
-  update our `open{:.const}` state.
-- `middleware{:.objectKey}`: Import and pass middleware to the
-  array that ensure the popover remains on the screen, no matter
-  where it ends up being positioned.
-- `whileElementsMounted{:.objectKey}`: Ensure the popover remains
+- `open{:.key}`: The open state from our `useState(){:js}` Hook
+  above.
+- `onOpenChange{:.key}`: A callback function that will be called
+  when the popover is opened or closed. We'll use this to update
+  our `isOpen{:.const}` state.
+- `middleware{:.key}`: Import and pass middleware to the array
+  that ensure the popover remains on the screen, no matter where
+  it ends up being positioned.
+- `whileElementsMounted{:.key}`: Ensure the popover remains
   anchored to the reference element by updating the position when
   necessary, only while both the reference and floating elements
   are mounted for performance.
@@ -87,26 +88,25 @@ import {
 } from '@floating-ui/react';
 
 function Popover() {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const {x, y, reference, floating, strategy, context} =
-    useFloating({
-      open,
-      onOpenChange: setOpen,
-      middleware: [offset(10), flip(), shift()],
-      whileElementsMounted: autoUpdate,
-    });
+  const {refs, floatingStyles, context} = useFloating({
+    open: isOpen,
+    onOpenChange: setIsOpen,
+    middleware: [offset(10), flip(), shift()],
+    whileElementsMounted: autoUpdate,
+  });
 }
 ```
 
-### Interaction hooks
+### Interaction Hooks
 
-Interaction hooks return objects containing keys of props that
+Interaction Hooks return objects containing keys of props that
 enable the popover to be opened, closed, or accessible to screen
 readers.
 
-Using the `context{:.const}` that was returned from the hook,
-call the interaction hooks:
+Using the `context{:.const}` that was returned from the Hook,
+call the interaction Hooks:
 
 ```js /context/
 import {
@@ -118,15 +118,14 @@ import {
 } from '@floating-ui/react';
 
 function Popover() {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const {x, y, reference, floating, strategy, context} =
-    useFloating({
-      open,
-      onOpenChange: setOpen,
-      middleware: [offset(10), flip(), shift()],
-      whileElementsMounted: autoUpdate,
-    });
+  const {refs, floatingStyles, context} = useFloating({
+    open: isOpen,
+    onOpenChange: setIsOpen,
+    middleware: [offset(10), flip(), shift()],
+    whileElementsMounted: autoUpdate,
+  });
 
   const click = useClick(context);
   const dismiss = useDismiss(context);
@@ -154,7 +153,7 @@ prop getters which can be used for rendering.
 
 ### Rendering
 
-Now we have all the variables and hooks set up, we can render out
+Now we have all the variables and Hooks set up, we can render out
 our elements.
 
 ```js
@@ -162,19 +161,14 @@ function Popover() {
   // ...
   return (
     <>
-      <button ref={reference} {...getReferenceProps()}>
+      <button ref={refs.setReference} {...getReferenceProps()}>
         Reference element
       </button>
-      {open && (
+      {isOpen && (
         <FloatingFocusManager context={context} modal={false}>
           <div
-            ref={floating}
-            style={{
-              position: strategy,
-              top: y ?? 0,
-              left: x ?? 0,
-              width: 'max-content',
-            }}
+            ref={refs.setFloating}
+            style={floatingStyles}
             {...getFloatingProps()}
           >
             Popover element
@@ -188,14 +182,14 @@ function Popover() {
 
 - `{...getReferenceProps()}{:js}` /
   `{...getFloatingProps()}{:js}` spreads the props from the
-  interaction hooks onto the relevant elements. They contain
+  interaction Hooks onto the relevant elements. They contain
   props like `onClick{:.keyword}`, `aria-expanded{:.keyword}`,
   etc.
 - `<FloatingFocusManager />{:js}` is a component that manages
   focus of the popover for non-modal or modal behavior. It should
   directly wrap the floating element and only be rendered when
   the popover is also rendered.
-  [FloatingFocusManager docs](/docs/FloatingFocusManager).
+  [`FloatingFocusManager` docs](/docs/FloatingFocusManager).
 
 ### Modal and non-modal behavior
 
@@ -244,7 +238,7 @@ like so:
 
 It is better to create a reusable component API that can be used
 in a variety of different scenarios more easily. We can place all
-of our hooks into a single custom hook for better reusability,
+of our Hooks into a single custom Hook for better reusability,
 which is then used by a controller component which encapsulates
 the state.
 

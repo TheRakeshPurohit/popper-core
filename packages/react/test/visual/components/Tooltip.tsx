@@ -1,18 +1,23 @@
-import React, {cloneElement, isValidElement, useEffect, useState} from 'react';
+import type {Placement} from '@floating-ui/react';
 import {
-  Placement,
-  offset,
-  flip,
-  shift,
   autoUpdate,
-  useFloating,
-  useInteractions,
-  useHover,
-  useFocus,
-  useRole,
+  flip,
+  FloatingDelayGroup,
+  FloatingPortal,
+  offset,
+  shift,
+  useDelayGroup,
   useDismiss,
+  useFloating,
+  useFocus,
+  useHover,
+  useInteractions,
+  useRole,
+  useTransitionStyles,
 } from '@floating-ui/react';
-import {Controls} from '../utils/Controls';
+import {cloneElement, isValidElement, useId, useState} from 'react';
+
+import {Button} from '../lib/Button';
 
 type Delay = number | Partial<{open: number; close: number}>;
 
@@ -24,51 +29,29 @@ interface Props {
 }
 
 export const Main = () => {
-  const [delay, setDelay] = useState<Delay>(0);
-
   return (
     <>
-      <h1>Tooltip</h1>
-      <p>
-        A floating element that displays a label describing another element.
-      </p>
-      <div className="container">
-        <Tooltip label="My tooltip" delay={delay}>
-          <button>My button</button>
+      <h1 className="text-5xl font-bold mb-8">Tooltip</h1>
+      <div className="grid place-items-center border border-slate-400 rounded lg:w-[40rem] h-[20rem] mb-4">
+        <Tooltip label="My tooltip">
+          <Button>My button</Button>
         </Tooltip>
       </div>
-      <Controls>
-        <button
-          onClick={() => setDelay(0)}
-          style={{background: delay === 0 ? 'black' : ''}}
-        >
-          delay: 0
-        </button>
-        <button
-          onClick={() => setDelay(500)}
-          style={{background: delay === 500 ? 'black' : ''}}
-        >
-          delay: 500
-        </button>
-        <button
-          onClick={() => setDelay({open: 500})}
-          style={{
-            background:
-              typeof delay === 'object' && delay.open === 500 ? 'black' : '',
-          }}
-        >
-          {String('delay: {open: 500}')}
-        </button>
-        <button
-          onClick={() => setDelay({close: 500})}
-          style={{
-            background:
-              typeof delay === 'object' && delay.close === 500 ? 'black' : '',
-          }}
-        >
-          {String('delay: {close: 500}')}
-        </button>
-      </Controls>
+      <div className="grid place-items-center border border-slate-400 rounded lg:w-[40rem] h-[20rem] mb-4">
+        <div className="flex gap-1">
+          <FloatingDelayGroup delay={{open: 500, close: 200}} timeoutMs={200}>
+            <Tooltip label="My tooltip">
+              <Button>My button</Button>
+            </Tooltip>
+            <Tooltip label="My tooltip 2">
+              <Button>My button</Button>
+            </Tooltip>
+            <Tooltip label="My tooltip 3">
+              <Button>My button</Button>
+            </Tooltip>
+          </FloatingDelayGroup>
+        </div>
+      </div>
     </>
   );
 };
@@ -81,46 +64,82 @@ export function Tooltip({
 }: Props) {
   const [open, setOpen] = useState(false);
 
-  const {x, y, reference, floating, strategy, context, refs, update} =
-    useFloating({
-      placement,
-      open,
-      onOpenChange: setOpen,
-      middleware: [offset(5), flip(), shift({padding: 8})],
-    });
+  const {refs, floatingStyles, context} = useFloating({
+    placement,
+    open,
+    onOpenChange: setOpen,
+    middleware: [offset(5), flip(), shift({padding: 8})],
+    whileElementsMounted: autoUpdate,
+  });
+
+  const {delay: groupDelay, currentId, isInstantPhase} = useDelayGroup(context);
+
+  const hover = useHover(context, {
+    delay: groupDelay === 0 ? delay : groupDelay,
+    move: false,
+  });
+  const focus = useFocus(context);
+  const role = useRole(context, {role: 'tooltip'});
+  const dismiss = useDismiss(context);
 
   const {getReferenceProps, getFloatingProps} = useInteractions([
-    useHover(context, {delay}),
-    useFocus(context),
-    useRole(context, {role: 'tooltip'}),
-    useDismiss(context),
+    hover,
+    focus,
+    role,
+    dismiss,
   ]);
 
-  useEffect(() => {
-    if (refs.reference.current && refs.floating.current && open) {
-      return autoUpdate(refs.reference.current, refs.floating.current, update);
-    }
-  }, [refs.reference, refs.floating, update, open]);
+  const instantDuration = 0;
+  const openDuration = 750;
+  const closeDuration = 250;
+
+  const {isMounted, styles} = useTransitionStyles(context, {
+    duration: isInstantPhase
+      ? {
+          open: instantDuration,
+          close:
+            currentId === context.floatingId ? closeDuration : instantDuration,
+        }
+      : {
+          open: openDuration,
+          close: closeDuration,
+        },
+    initial: {
+      opacity: 0,
+      scale: '0.925',
+    },
+    common: ({side}) => ({
+      transitionTimingFunction: 'cubic-bezier(.18,.87,.4,.97)',
+      transformOrigin: {
+        top: 'bottom',
+        left: 'right',
+        bottom: 'top',
+        right: 'left',
+      }[side],
+    }),
+  });
 
   return (
     <>
       {isValidElement(children) &&
-        cloneElement(children, getReferenceProps({ref: reference}))}
-      {open && (
-        <div
-          {...getFloatingProps({
-            ref: floating,
-            className: 'Tooltip',
-            style: {
-              position: strategy,
-              top: y ?? '',
-              left: x ?? '',
-            },
-          })}
-        >
-          {label}
-        </div>
-      )}
+        cloneElement(children, getReferenceProps({ref: refs.setReference}))}
+      <FloatingPortal>
+        {isMounted && (
+          <div
+            role="presentation"
+            ref={refs.setFloating}
+            style={floatingStyles}
+          >
+            <div
+              className="bg-black text-white p-1 px-2 rounded"
+              style={styles}
+              {...getFloatingProps()}
+            >
+              {label}
+            </div>
+          </div>
+        )}
+      </FloatingPortal>
     </>
   );
 }

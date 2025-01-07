@@ -1,14 +1,70 @@
+<PageCard>
+
 # inline
 
-`inline(){:js}` provides improved positioning for inline
-reference elements that span over multiple lines, such as
-hyperlinks or range selections.
+Improves positioning for inline reference elements that span over
+multiple lines.
 
-This is useful as the default positioning using
+<MiddlewareContainer>
+  <MiddlewareBadge type="Placement Modifier" />
+</MiddlewareContainer>
+
+<ShowFor packages={['core']}>
+
+```js
+import {inline} from '@floating-ui/core';
+```
+
+</ShowFor>
+
+<ShowFor packages={['dom']}>
+
+```js
+import {inline} from '@floating-ui/dom';
+```
+
+</ShowFor>
+
+<ShowFor packages={['react']}>
+
+```js
+import {inline} from '@floating-ui/react';
+```
+
+</ShowFor>
+
+<ShowFor packages={['react-dom']}>
+
+```js
+import {inline} from '@floating-ui/react-dom';
+```
+
+</ShowFor>
+
+<ShowFor packages={['vue']}>
+
+```js
+import {inline} from '@floating-ui/vue';
+```
+
+</ShowFor>
+
+<ShowFor packages={['react-native']}>
+
+```js
+import {inline} from '@floating-ui/react-native';
+```
+
+</ShowFor>
+
+This is useful for reference elements such as hyperlinks or range
+selections, as the default positioning using
 `getBoundingClientRect(){:js}` may appear "detached" when
 measuring over the bounding box.
 
-In the following examples, the `placement{:.objectKey}` is
+</PageCard>
+
+In the following examples, the `placement{:.key}` is
 `'top'{:js}`.
 
 Without `inline(){:js}`:
@@ -18,7 +74,7 @@ Without `inline(){:js}`:
   height={256}
   alt="inline disabled"
   src="/inline-disabled.png"
-  className="border border-gray-800 dark:border-none rounded-lg"
+  className="rounded-lg shadow"
   draggable={false}
 />
 
@@ -29,35 +85,56 @@ With `inline(){:js}`:
   height={256}
   alt="inline enabled"
   src="/inline-enabled.png"
-  className="border border-gray-800 dark:border-none rounded-lg"
+  className="rounded-lg shadow"
   draggable={false}
 />
 
 ## Usage
 
-```js
-import {computePosition, inline} from '@floating-ui/dom';
+<ShowFor packages={['core', 'dom']}>
 
+```js
 computePosition(referenceEl, floatingEl, {
   middleware: [inline()],
 });
 ```
 
+</ShowFor>
+
+<ShowFor packages={['react', 'react-dom', 'react-native']}>
+
+```js
+useFloating({
+  middleware: [inline()],
+});
+```
+
+</ShowFor>
+
+<ShowFor packages={['vue']}>
+
+```js
+useFloating(reference, floating, {
+  middleware: [inline()],
+});
+```
+
+</ShowFor>
+
 ### Choosing a rect
 
 By default, `inline(){:js}` infers which of the
-`ClientRect{:.class}`s to choose based on the
-`placement{:.objectKey}`. However, you may want a different rect
-to be chosen.
+`ClientRect{:.class}`s to choose based on the `placement{:.key}`.
+However, you may want a different rect to be chosen.
 
 For instance, if the user hovered over the last client rect, you
 likely want the floating element to be placed there. This logic
 is only applied when the reference element's rects are disjoined.
 
 ```js
-function onMouseEnter({clientX, clientY}) {
+function onMouseEnter({clientX: x, clientY: y}) {
   computePosition(referenceEl, floatingEl, {
-    middleware: [inline({x: clientX, y: clientY})],
+    middleware: [inline({x, y})],
   }).then(({x, y}) => {
     // ...
   });
@@ -76,30 +153,41 @@ of your middleware array, before `flip(){:js}` (if used).
 These are the options you can pass to `inline(){:js}`.
 
 ```ts
-interface Options {
+interface InlineOptions {
   x?: number;
   y?: number;
   padding?: number | SideObject;
 }
 ```
 
-### x
+### `x{:.key}`
 
 default: `undefined{:js}`
 
 This is the viewport-relative (client) x-axis coordinate which
 can be passed in to choose a rect.
 
-### y
+### `y{:.key}`
 
 default: `undefined{:js}`
 
 This is the viewport-relative (client) y-axis coordinate which
 can be passed in to choose a rect.
 
-### padding
+### `padding{:.key}`
 
 default: `2{:js}`
 
 This describes the padding around a disjoined rect when choosing
 it.
+
+### Deriving options from state
+
+You can derive the options from the
+[middleware lifecycle state](/docs/middleware#middlewarestate):
+
+```js
+inline((state) => ({
+  padding: state.rects.reference.width,
+}));
+```

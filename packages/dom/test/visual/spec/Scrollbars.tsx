@@ -1,20 +1,20 @@
 import type {Placement} from '@floating-ui/core';
-import {useFloating, shift} from '@floating-ui/react-dom';
+import {autoUpdate, shift, useFloating} from '@floating-ui/react-dom';
+import {useState} from 'react';
+
 import {allPlacements} from '../utils/allPlacements';
-import {useLayoutEffect, useState} from 'react';
 import {Controls} from '../utils/Controls';
 import {useSize} from '../utils/useSize';
 
 export function Scrollbars() {
   const [rtl, setRtl] = useState(false);
   const [placement, setPlacement] = useState<Placement>('bottom');
-  const {x, y, reference, floating, strategy, update} = useFloating({
+  const {x, y, refs, strategy} = useFloating({
     placement,
+    whileElementsMounted: autoUpdate,
     middleware: [shift({crossAxis: true, altBoundary: true})],
   });
   const [size, handleSizeChange] = useSize(300);
-
-  useLayoutEffect(update, [size, update, rtl]);
 
   return (
     <>
@@ -24,11 +24,11 @@ export function Scrollbars() {
         className="container"
         style={{overflow: 'scroll', direction: rtl ? 'rtl' : 'ltr'}}
       >
-        <div ref={reference} className="reference">
+        <div ref={refs.setReference} className="reference">
           Reference
         </div>
         <div
-          ref={floating}
+          ref={refs.setFloating}
           className="floating"
           style={{
             position: strategy,

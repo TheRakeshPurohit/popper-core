@@ -1,16 +1,20 @@
 import * as React from 'react';
-import useLayoutEffect from 'use-isomorphic-layout-effect';
+import useModernLayoutEffect from 'use-isomorphic-layout-effect';
+import {SafeReact} from '../utils/safeReact';
 
 let serverHandoffComplete = false;
 let count = 0;
-const genId = () => `floating-ui-${count++}`;
+const genId = () =>
+  // Ensure the id is unique with multiple independent versions of Floating UI
+  // on <React 18
+  `floating-ui-${Math.random().toString(36).slice(2, 6)}${count++}`;
 
-function useFloatingId() {
+function useFloatingId(): string | undefined {
   const [id, setId] = React.useState(() =>
-    serverHandoffComplete ? genId() : undefined
+    serverHandoffComplete ? genId() : undefined,
   );
 
-  useLayoutEffect(() => {
+  useModernLayoutEffect(() => {
     if (id == null) {
       setId(genId());
     }
@@ -18,21 +22,18 @@ function useFloatingId() {
   }, []);
 
   React.useEffect(() => {
-    if (!serverHandoffComplete) {
-      serverHandoffComplete = true;
-    }
+    serverHandoffComplete = true;
   }, []);
 
   return id;
 }
 
-// `toString()` prevents bundlers from trying to `import { useId } from 'react'`
-const useReactId = (React as any)['useId'.toString()] as () => string;
+const useReactId = SafeReact.useId as () => string | undefined;
 
 /**
  * Uses React 18's built-in `useId()` when available, or falls back to a
  * slightly less performant (requiring a double render) implementation for
  * earlier React versions.
- * @see https://floating-ui.com/docs/useId
+ * @see https://floating-ui.com/docs/react-utils#useid
  */
-export const useId = useReactId ?? useFloatingId;
+export const useId = useReactId || useFloatingId;

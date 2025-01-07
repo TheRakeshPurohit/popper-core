@@ -1,37 +1,35 @@
 import type {Placement} from '@floating-ui/core';
-import {useFloating, arrow} from '@floating-ui/react-dom';
+import {arrow, autoUpdate, useFloating} from '@floating-ui/react-dom';
+import {useRef, useState} from 'react';
+
 import {allPlacements} from '../utils/allPlacements';
-import {useState, useLayoutEffect, useRef} from 'react';
 import {Controls} from '../utils/Controls';
 import {useSize} from './useSize';
 
 export function New() {
   const [placement, setPlacement] = useState<Placement>('bottom');
   const arrowRef = useRef<HTMLDivElement | null>(null);
-  const {x, y, reference, floating, strategy, update} = useFloating({
+  const {refs, floatingStyles} = useFloating({
     placement,
+    whileElementsMounted: autoUpdate,
     middleware: [arrow({element: arrowRef})],
   });
 
   const [size, handleSizeChange] = useSize();
-
-  useLayoutEffect(update, [update, size]);
 
   return (
     <>
       <h1>New</h1>
       <p>This route lets you work on new features! Have fun :-)</p>
       <div className="container">
-        <div ref={reference} className="reference">
+        <div ref={refs.setReference} className="reference">
           Reference
         </div>
         <div
-          ref={floating}
+          ref={refs.setFloating}
           className="floating"
           style={{
-            position: strategy,
-            top: y ?? '',
-            left: x ?? '',
+            ...floatingStyles,
             width: size,
             height: size,
           }}

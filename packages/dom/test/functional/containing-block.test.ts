@@ -1,21 +1,28 @@
-import {test, expect} from '@playwright/test';
+import {expect, test} from '@playwright/test';
+
 import {click} from './utils/click';
 
-['transform', 'perspective', 'transform, perspective', 'opacity'].forEach(
-  (willChange) => {
-    test(`should be positioned on bottom ${willChange}`, async ({page}) => {
-      await page.goto('http://localhost:1234/containing-block');
+[
+  'transform',
+  'translate',
+  'scale',
+  'rotate',
+  'perspective',
+  'transform, perspective',
+  'opacity',
+].forEach((willChange) => {
+  test(`should be positioned on bottom ${willChange}`, async ({page}) => {
+    await page.goto('http://localhost:1234/containing-block');
 
-      // Ensure `contain` does not affect `will-change`
-      await click(page, `[data-testid="contain-size"]`);
-      await click(page, `[data-testid="willchange-${willChange}"]`);
+    // Ensure `contain` does not affect `will-change`
+    await click(page, `[data-testid="contain-size"]`);
+    await click(page, `[data-testid="willchange-${willChange}"]`);
 
-      expect(await page.locator('.container').screenshot()).toMatchSnapshot(
-        `will-change-${willChange}.png`
-      );
-    });
-  }
-);
+    expect(await page.locator('.container').screenshot()).toMatchSnapshot(
+      `will-change-${willChange}.png`,
+    );
+  });
+});
 
 ['paint', 'layout', 'paint, layout', 'strict', 'content', 'size'].forEach(
   (contain) => {
@@ -27,8 +34,22 @@ import {click} from './utils/click';
       await click(page, `[data-testid="contain-${contain}"]`);
 
       expect(await page.locator('.container').screenshot()).toMatchSnapshot(
-        `contain-${contain}.png`
+        `contain-${contain}.png`,
       );
     });
-  }
+  },
 );
+
+['normal', 'inline-size', 'size'].forEach((containerType) => {
+  test(`should be positioned on bottom with container-type ${containerType}`, async ({
+    page,
+  }) => {
+    await page.goto('http://localhost:1234/containing-block');
+
+    await click(page, `[data-testid="container-type-${containerType}"]`);
+
+    expect(await page.locator('.container').screenshot()).toMatchSnapshot(
+      `container-type-${containerType}.png`,
+    );
+  });
+});

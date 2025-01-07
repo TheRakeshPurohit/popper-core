@@ -1,57 +1,88 @@
 {
   "name": "@floating-ui/monorepo",
-  "@rollingversions/ignore": true,
+  "packageManager": "pnpm@9.6.0",
   "private": true,
   "version": "0.0.0",
-  "@rollingversions": {
-    "baseVersion": [
-      0,
-      0,
-      0
-    ]
-  },
   "description": "Floating UI monorepo",
+  "engines": {
+    "node": ">=18.19.0",
+    "pnpm": ">=8.13.1"
+  },
   "workspaces": [
-    "./packages/*"
+    "./packages/*",
+    "extension",
+    "config"
   ],
   "scripts": {
-    "test:functional": "npx playwright test packages/dom/test/functional",
-    "test:functional:update": "npm run test:functional -- -u",
-    "build": "npm -w packages/core run build && npm -w packages/dom run build && npm -w packages/react-dom run build && npm -w packages/react-native run build && npm -w packages/react run build && npm -w packages/vue run build",
-    "build:typescript": "tsc --project .config/tsconfig.json",
-    "clean": "rm -rf packages/**/src/[^_]*.d.ts packages/**/src/**/[^_]*.d.ts packages/**/dist",
-    "lint": "eslint . --ext .js,.ts",
-    "test:types": "tsc",
-    "dev:website": "npm run build && npm -w website run dev",
-    "postinstall": "patch-package"
-  },
-  "alias": {
-    "@floating-ui/core": "@floating-ui/core/src/index.ts",
-    "@floating-ui/dom": "@floating-ui/dom/src/index.ts",
-    "@floating-ui/react-dom": "@floating-ui/react-dom/src/index.ts",
-    "@floating-ui/react": "@floating-ui/react/src/index.ts",
-    "@floating-ui/vue": "@floating-ui/vue/src/index.ts"
+    "lint": "turbo lint",
+    "format": "turbo format",
+    "playwright": "turbo playwright",
+    "playwright:update": "turbo playwright -- -u",
+    "build": "turbo build",
+    "build:api": "turbo build:api",
+    "clean": "turbo clean",
+    "publint": "turbo publint",
+    "test": "turbo test",
+    "prepack": "turbo prepack",
+    "typecheck": "turbo typecheck",
+    "release": "turbo prepack && turbo publint && changeset publish"
   },
   "author": "",
   "license": "MIT",
+  "browserslist": [
+    "Chrome >= 73",
+    "Firefox >= 78",
+    "Edge >= 79",
+    "Safari >= 12.0",
+    "iOS >= 12.0",
+    "Opera >= 53"
+  ],
   "prettier": {
-    "singleQuote": true,
     "bracketSpacing": false,
-    "proseWrap": "always"
+    "singleQuote": true,
+    "useTabs": false,
+    "semi": true
   },
   "devDependencies": {
-    "@playwright/test": "1.17.2",
-    "@types/jest": "^27.0.3",
-    "@types/node": "^16.11.10",
-    "@types/resize-observer-browser": "^0.1.7",
-    "@typescript-eslint/eslint-plugin": "^5.4.0",
-    "@typescript-eslint/parser": "^5.4.0",
-    "eslint": "^8.3.0",
-    "eslint-plugin-react-hooks": "^4.3.0",
-    "parcel": "^2.6.0",
-    "patch-package": "^6.5.0",
-    "prettier": "^2.5.0",
-    "process": "^0.11.10",
-    "typescript": "~4.1"
+    "@babel/preset-env": "^7.23.7",
+    "@babel/preset-typescript": "^7.23.3",
+    "@changesets/cli": "^2.27.1",
+    "@changesets/types": "^6.0.0",
+    "@eslint/js": "^9.17.0",
+    "@microsoft/api-extractor": "^7.43.1",
+    "@playwright/test": "^1.40.1",
+    "@rollup/plugin-alias": "^5.1.0",
+    "@rollup/plugin-babel": "^6.0.4",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-replace": "^5.0.5",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.10.6",
+    "babel-plugin-annotate-pure-calls": "^0.4.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "globals": "^15.14.0",
+    "jsdom": "^22.1.0",
+    "postcss": "^8.4.32",
+    "prettier": "^3.1.1",
+    "publint": "^0.2.7",
+    "rimraf": "^5.0.5",
+    "rollup": "^4.9.2",
+    "rollup-plugin-copy": "^3.5.0",
+    "tailwindcss": "^3.4.0",
+    "turbo": "^2.3.3",
+    "typescript": "~5.2.2",
+    "typescript-eslint": "^8.17.0",
+    "vite": "^5.0.10",
+    "vitest": "^1.1.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": "^5.0.2"
+    }
   }
 }

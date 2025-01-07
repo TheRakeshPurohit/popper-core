@@ -3,21 +3,12 @@ description: Performs functional tests checks
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-node@v2
-      with:
-        node-version: '17'
-    - uses: bahmutov/npm-install@v1
-    - run: npx playwright install-deps
+    - run: npx playwright install --with-deps chromium
       shell: sh
-    - run: npx playwright install
+    - run: pnpm run playwright
       shell: sh
-    - run: npm run build
-      shell: sh
-    - run: npm run test:functional
-      shell: sh
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       if: always()
       with:
         name: visual-snapshots-diff
-        path: test-results
+        path: packages/dom/test-results

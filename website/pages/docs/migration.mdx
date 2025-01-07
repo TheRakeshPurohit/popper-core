@@ -1,7 +1,10 @@
-# Migrating from Popper 2 to Floating UI
+<PageCard>
 
-This page is dedicated to helping you migrate from Popper v2 to
-Floating UI.
+# Migration
+
+Learn how to migrate from Popper v2 to Floating UI.
+
+</PageCard>
 
 **Rebranding**: The library was rebranded as it offers more
 packages and functionality, like the new [React](/docs/react)
@@ -26,13 +29,18 @@ Similarities include:
 
 - The order of arguments and types of the positioning function
   are practically identical.
-- `placement{:.objectKey}` and `strategy{:.objectKey}` are the
-  same, passed as a third argument options object.
-- `middleware{:.objectKey}` in Floating UI is conceptually
-  similar to `modifiers{:.objectKey}` from Popper 2.
+- `placement{:.key}` and `strategy{:.key}` are the same, passed
+  as a third argument options object.
+- `middleware{:.key}` in Floating UI is conceptually similar to
+  `modifiers{:.key}` from Popper 2.
 - Options passed to middleware have very similar configuration as
   Popper 2, and APIs like `detectOverflow` and virtual elements
   are almost identical.
+
+<Notice gap="above">
+  More info about the motivation for Floating UI is [available
+  here](/docs/motivation).
+</Notice>
 
 ## Change dependencies
 
@@ -89,7 +97,7 @@ computePosition(referenceEl, floatingEl).then(({x, y}) => {
 });
 ```
 
-Read more about [computePosition here](/docs/computePosition).
+Read more about [`computePosition` here](/docs/computePosition).
 
 ## Updating the position automatically
 
@@ -120,12 +128,12 @@ cleanup();
 Floating UI also adds `ResizeObserver{:.class}` listeners by
 default, unlike Popper, handling an additional update edge case.
 
-Read more about [autoUpdate here](/docs/autoUpdate).
+Read more about [`autoUpdate` here](/docs/autoUpdate).
 
 ## Configure middleware
 
-Floating UI honors the `placement{:.objectKey}` you passed in and
-does not modify it by default:
+Floating UI honors the `placement{:.key}` you passed in and does
+not modify it by default:
 
 ```js
 import {computePosition} from '@floating-ui/dom';
@@ -198,7 +206,7 @@ computePosition(referenceEl, floatingEl, {
 });
 ```
 
-- [offset](/docs/offset)
+- [`offset`](/docs/offset)
 
 A lot of the options passed in to middleware options are similar
 or the same as Popper 2. To learn about their options, you can
@@ -212,12 +220,12 @@ styled.
 
 As Floating UI is pure, you now handle these styles yourself, and
 you always pass an element in manually. You can read more about
-this on the [arrow middleware](/docs/arrow) page.
+this on the [`arrow` middleware](/docs/arrow) page.
 
 ## Auto placement is now a middleware
 
 In Popper 2, this was part of `flip` but now it's separate and is
-no longer a string option for `placement{:.objectKey}`.
+no longer a string option for `placement{:.key}`.
 
 Popper 2:
 
@@ -241,7 +249,7 @@ computePosition(referenceEl, floatingEl, {
 
 ## Other
 
-APIs like [detectOverflow](/docs/detectOverflow) and
+APIs like [`detectOverflow`](/docs/detectOverflow) and
 [virtual elements](/docs/virtual-elements) are basically the same
 as Popper 2 with only minor differences.
 

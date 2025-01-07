@@ -1,15 +1,16 @@
 import type {Dimensions} from '@floating-ui/core';
-import {round} from './math';
-import {getComputedStyle} from './getComputedStyle';
+import {round} from '@floating-ui/utils';
+import {getComputedStyle, isHTMLElement} from '@floating-ui/utils/dom';
 
-export function getCssDimensions(
-  element: HTMLElement
-): Dimensions & {fallback: boolean} {
+export function getCssDimensions(element: Element): Dimensions & {$: boolean} {
   const css = getComputedStyle(element);
-  let width = parseFloat(css.width);
-  let height = parseFloat(css.height);
-  const offsetWidth = element.offsetWidth;
-  const offsetHeight = element.offsetHeight;
+  // In testing environments, the `width` and `height` properties are empty
+  // strings for SVG elements, returning NaN. Fallback to `0` in this case.
+  let width = parseFloat(css.width) || 0;
+  let height = parseFloat(css.height) || 0;
+  const hasOffset = isHTMLElement(element);
+  const offsetWidth = hasOffset ? element.offsetWidth : width;
+  const offsetHeight = hasOffset ? element.offsetHeight : height;
   const shouldFallback =
     round(width) !== offsetWidth || round(height) !== offsetHeight;
 
@@ -21,6 +22,6 @@ export function getCssDimensions(
   return {
     width,
     height,
-    fallback: shouldFallback,
+    $: shouldFallback,
   };
 }

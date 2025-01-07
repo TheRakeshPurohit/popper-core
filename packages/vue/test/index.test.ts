@@ -1,18 +1,16 @@
-/* eslint-disable react-hooks/rules-of-hooks */
+import {cleanup, fireEvent, render, waitFor} from '@testing-library/vue';
+import {vi} from 'vitest';
+import {defineComponent, effectScope, ref, toRef} from 'vue';
 
-import {
-  arrow,
+import {arrow, offset, useFloating} from '../src';
+import type {
   FloatingElement,
   Middleware,
-  offset,
   Placement,
   ReferenceElement,
   Strategy,
-  useFloating,
-} from '../src';
-import {UseFloatingOptions, ArrowOptions} from '../src/types';
-import {defineComponent, effectScope, ref, toRef} from 'vue';
-import {render, waitFor, cleanup, fireEvent} from '@testing-library/vue';
+} from '../src/types';
+import type {ArrowOptions, UseFloatingOptions} from '../src/types';
 
 describe('useFloating', () => {
   function setup(options?: UseFloatingOptions) {
@@ -119,6 +117,248 @@ describe('useFloating', () => {
     });
   });
 
+  test('updates `isPositioned` when position is computed', async () => {
+    const App = defineComponent({
+      name: 'App',
+      setup() {
+        return setup();
+      },
+      template: /* HTML */ `
+        <div ref="reference" />
+        <div ref="floating" />
+        <div data-testid="isPositioned">{{isPositioned}}</div>
+      `,
+    });
+
+    const {getByTestId} = render(App);
+
+    await waitFor(() => {
+      expect(getByTestId('isPositioned').textContent).toBe('false');
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('isPositioned').textContent).toBe('true');
+    });
+  });
+
+  test('updates floating coords when placement is a getter function', async () => {
+    const App = defineComponent({
+      name: 'App',
+      props: ['placement'],
+      setup(props: {placement?: Placement}) {
+        return setup({
+          placement: () => props.placement,
+          middleware: [offset(5)],
+        });
+      },
+      template: /* HTML */ `
+        <div ref="reference" />
+        <div ref="floating" />
+        <div data-testid="x">{{x}}</div>
+        <div data-testid="y">{{y}}</div>
+      `,
+    });
+
+    const {rerender, getByTestId} = render(App, {
+      props: {placement: 'bottom'},
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('x').textContent).toBe('0');
+      expect(getByTestId('y').textContent).toBe('5');
+    });
+
+    await rerender({placement: 'right'});
+
+    await waitFor(() => {
+      expect(getByTestId('x').textContent).toBe('5');
+      expect(getByTestId('y').textContent).toBe('0');
+    });
+  });
+
+  test('updates floating coords when middleware is a getter function', async () => {
+    const App = defineComponent({
+      name: 'App',
+      props: ['middleware'],
+      setup(props) {
+        return setup({middleware: () => props.middleware});
+      },
+      template: /* HTML */ `
+        <div ref="reference" />
+        <div ref="floating" />
+        <div data-testid="x">{{x}}</div>
+        <div data-testid="y">{{y}}</div>
+      `,
+    });
+
+    const {rerender, getByTestId} = render(App, {
+      props: {middleware: []},
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('x').textContent).toBe('0');
+      expect(getByTestId('y').textContent).toBe('0');
+    });
+
+    await rerender({middleware: [offset(10)]});
+
+    await waitFor(() => {
+      expect(getByTestId('x').textContent).toBe('0');
+      expect(getByTestId('y').textContent).toBe('10');
+    });
+  });
+
+  test('updates floating position when strategy is a getter function', async () => {
+    const App = defineComponent({
+      name: 'App',
+      props: ['strategy'],
+      setup(props: {strategy?: Strategy}) {
+        return setup({strategy: () => props.strategy});
+      },
+      template: /* HTML */ `
+        <div ref="reference" />
+        <div ref="floating" />
+        <div data-testid="position">{{strategy}}</div>
+      `,
+    });
+
+    const {rerender, getByTestId} = render(App, {
+      props: {strategy: 'absolute'},
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('position').textContent).toBe('absolute');
+    });
+
+    await rerender({strategy: 'fixed'});
+
+    await waitFor(() => {
+      expect(getByTestId('position').textContent).toBe('fixed');
+    });
+  });
+
+  test('updates `isPositioned` on open change', async () => {
+    const App = defineComponent({
+      name: 'App',
+      props: ['open'],
+      setup(props: {open?: boolean}) {
+        return setup({open: toRef(props, 'open')});
+      },
+      template: /* HTML */ `
+        <div ref="reference" />
+        <div ref="floating" />
+        <div data-testid="isPositioned">{{isPositioned}}</div>
+      `,
+    });
+
+    const {rerender, getByTestId} = render(App, {
+      props: {open: false},
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('isPositioned').textContent).toBe('false');
+    });
+
+    await rerender({open: true});
+
+    await waitFor(() => {
+      expect(getByTestId('isPositioned').textContent).toBe('true');
+    });
+  });
+
+  test('resets `isPositioned` on open change', async () => {
+    const App = defineComponent({
+      name: 'App',
+      props: ['open'],
+      setup(props: {open?: boolean}) {
+        return setup({open: toRef(props, 'open')});
+      },
+      template: /* HTML */ `
+        <div ref="reference" />
+        <div ref="floating" />
+        <div data-testid="isPositioned">{{isPositioned}}</div>
+      `,
+    });
+
+    const {rerender, getByTestId} = render(App, {
+      props: {open: true},
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('isPositioned').textContent).toBe('true');
+    });
+
+    await rerender({open: false});
+
+    await waitFor(() => {
+      expect(getByTestId('isPositioned').textContent).toBe('false');
+    });
+  });
+
+  test('resets `isPositioned` on open change and open is a getter function', async () => {
+    const App = defineComponent({
+      name: 'App',
+      props: ['open'],
+      setup(props: {open?: boolean}) {
+        return setup({open: () => props.open});
+      },
+      template: /* HTML */ `
+        <div ref="reference" />
+        <div ref="floating" />
+        <div data-testid="isPositioned">{{isPositioned}}</div>
+      `,
+    });
+
+    const {rerender, getByTestId} = render(App, {
+      props: {open: true},
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('isPositioned').textContent).toBe('true');
+    });
+
+    await rerender({open: false});
+
+    await waitFor(() => {
+      expect(getByTestId('isPositioned').textContent).toBe('false');
+    });
+  });
+
+  test('does not set `isPositioned` to true when open is false', async () => {
+    const App = defineComponent({
+      name: 'App',
+      props: ['open', 'strategy'],
+      setup(props: {open?: boolean; strategy?: Strategy}) {
+        return setup({
+          open: toRef(props, 'open'),
+          strategy: toRef(props, 'strategy'),
+        });
+      },
+      template: /* HTML */ `
+        <div ref="reference" />
+        <div ref="floating" />
+        <div data-testid="position">{{strategy}}</div>
+        <div data-testid="isPositioned">{{isPositioned}}</div>
+      `,
+    });
+
+    const {rerender, getByTestId} = render(App, {
+      props: {open: false, strategy: 'absolute'},
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('position').textContent).toBe('absolute');
+      expect(getByTestId('isPositioned').textContent).toBe('false');
+    });
+
+    await rerender({strategy: 'fixed'});
+
+    await waitFor(() => {
+      expect(getByTestId('position').textContent).toBe('fixed');
+      expect(getByTestId('isPositioned').textContent).toBe('false');
+    });
+  });
+
   test('fallbacks to default when placement becomes undefined', async () => {
     const App = defineComponent({
       name: 'App',
@@ -178,7 +418,7 @@ describe('useFloating', () => {
   });
 
   test('calls `whileElementsMounted` callback when reference and floating are mounted', async () => {
-    const whileElementsMounted = jest.fn();
+    const whileElementsMounted = vi.fn();
     const App = defineComponent({
       name: 'App',
       setup() {
@@ -202,7 +442,7 @@ describe('useFloating', () => {
   });
 
   test('does not call `whileElementsMounted` callback on reference change', async () => {
-    const whileElementsMounted = jest.fn();
+    const whileElementsMounted = vi.fn();
     const App = defineComponent({
       name: 'App',
       props: ['content'],
@@ -223,7 +463,7 @@ describe('useFloating', () => {
   });
 
   test('does not call `whileElementsMounted` callback on floating change', async () => {
-    const whileElementsMounted = jest.fn();
+    const whileElementsMounted = vi.fn();
     const App = defineComponent({
       name: 'App',
       props: ['content'],
@@ -244,7 +484,7 @@ describe('useFloating', () => {
   });
 
   test('calls `whileElementsMounted` cleanup callback on reference visibility change', async () => {
-    const whileElementsMountedCleanup = jest.fn();
+    const whileElementsMountedCleanup = vi.fn();
     const App = defineComponent({
       name: 'App',
       props: ['visible'],
@@ -269,7 +509,7 @@ describe('useFloating', () => {
   });
 
   test('calls `whileElementsMounted` cleanup callback on floating visibility change', async () => {
-    const whileElementsMountedCleanup = jest.fn();
+    const whileElementsMountedCleanup = vi.fn();
     const App = defineComponent({
       name: 'App',
       props: ['visible'],
@@ -294,7 +534,7 @@ describe('useFloating', () => {
   });
 
   test('calls `whileElementsMounted` cleanup callback on unmount', async () => {
-    const whileElementsMountedCleanup = jest.fn();
+    const whileElementsMountedCleanup = vi.fn();
     const App = defineComponent({
       name: 'App',
       setup() {
@@ -317,7 +557,7 @@ describe('useFloating', () => {
   });
 
   test('calls `whileElementsMounted` cleanup callback on scope dispose', async () => {
-    const whileElementsMountedCleanup = jest.fn();
+    const whileElementsMountedCleanup = vi.fn();
     const scope = effectScope();
     const App = defineComponent({
       name: 'App',
@@ -327,7 +567,7 @@ describe('useFloating', () => {
             whileElementsMounted() {
               return whileElementsMountedCleanup;
             },
-          })
+          }),
         );
       },
       template: /* HTML */ `
@@ -343,7 +583,7 @@ describe('useFloating', () => {
   });
 
   test('does not call `whileElementsMounted` cleanup callback on reference change', async () => {
-    const whileElementsMountedCleanup = jest.fn();
+    const whileElementsMountedCleanup = vi.fn();
     const App = defineComponent({
       name: 'App',
       props: ['content'],
@@ -368,7 +608,7 @@ describe('useFloating', () => {
   });
 
   test('does not call `whileElementsMounted` cleanup callback on floating change', async () => {
-    const whileElementsMountedCleanup = jest.fn();
+    const whileElementsMountedCleanup = vi.fn();
     const App = defineComponent({
       name: 'App',
       props: ['content'],
@@ -423,7 +663,7 @@ describe('useFloating', () => {
 
     await waitFor(() => {
       expect(getByTestId('middleware-data-test-content').textContent).toBe(
-        'Content'
+        'Content',
       );
     });
   });
@@ -552,6 +792,100 @@ describe('useFloating', () => {
       expect(getByTestId('y').textContent).toBe('5');
     });
   });
+
+  test('does not throw when component type reference renders nothing', () => {
+    const FloatingReference = defineComponent({
+      name: 'FloatingReference',
+      render() {
+        return null;
+      },
+    });
+    const App = defineComponent({
+      name: 'App',
+      components: {FloatingReference},
+      setup() {
+        return setup({});
+      },
+      template: /* HTML */ `
+        <FloatingReference ref="reference" />
+        <div ref="floating" />
+      `,
+    });
+
+    render(App);
+  });
+
+  test('does not throw when component type floating renders nothing', () => {
+    const FloatingFloating = defineComponent({
+      name: 'FloatingFloating',
+      render() {
+        return null;
+      },
+    });
+    const App = defineComponent({
+      name: 'App',
+      components: {FloatingFloating},
+      setup() {
+        return setup({});
+      },
+      template: /* HTML */ `
+        <div ref="reference" />
+        <FloatingFloating ref="floating" />
+      `,
+    });
+
+    render(App);
+  });
+
+  test('does not throw when component type reference renders nothing and "$el" is null', () => {
+    const FloatingReference = defineComponent({
+      name: 'FloatingReference',
+      setup(props, {expose}) {
+        expose({$el: null});
+      },
+      render() {
+        return null;
+      },
+    });
+    const App = defineComponent({
+      name: 'App',
+      components: {FloatingReference},
+      setup() {
+        return setup({});
+      },
+      template: /* HTML */ `
+        <FloatingReference ref="reference" />
+        <div ref="floating" />
+      `,
+    });
+
+    render(App);
+  });
+
+  test('does not throw when component type floating renders nothing and "$el" is null', () => {
+    const FloatingFloating = defineComponent({
+      name: 'FloatingFloating',
+      setup(props, {expose}) {
+        expose({$el: null});
+      },
+      render() {
+        return null;
+      },
+    });
+    const App = defineComponent({
+      name: 'App',
+      components: {FloatingFloating},
+      setup() {
+        return setup({});
+      },
+      template: /* HTML */ `
+        <div ref="reference" />
+        <FloatingFloating ref="floating" />
+      `,
+    });
+
+    render(App);
+  });
 });
 
 describe('arrow', () => {
@@ -565,29 +899,6 @@ describe('arrow', () => {
 
     return {reference, floating, floatingArrow, ...position};
   }
-
-  test('renders arrow with padding', async () => {
-    const App = defineComponent({
-      name: 'App',
-      setup() {
-        return setup({padding: 5});
-      },
-      template: /* HTML */ `
-        <div ref="reference" />
-        <div ref="floating" />
-        <div ref="floatingArrow" />
-        <div data-testid="x">{{middlewareData.arrow?.x}}</div>
-        <div data-testid="y">{{middlewareData.arrow?.y}}</div>
-      `,
-    });
-
-    const {getByTestId} = render(App);
-
-    await waitFor(() => {
-      expect(getByTestId('x').textContent).toBe('5');
-      expect(getByTestId('y').textContent).toBe('');
-    });
-  });
 
   test('allows to use with component type arrow', async () => {
     const FloatingArrow = defineComponent({

@@ -1,9 +1,9 @@
 import {
-  useFloating,
-  useInteractions,
   FloatingFocusManager,
   useClick,
   useDismiss,
+  useFloating,
+  useInteractions,
   useListNavigation,
 } from '@floating-ui/react';
 import {useRef, useState} from 'react';
@@ -19,7 +19,7 @@ export const Main = ({orientation = 'horizontal', loop = false}: Props) => {
 
   const listRef = useRef<Array<HTMLElement | null>>([]);
 
-  const {x, y, reference, floating, strategy, context} = useFloating({
+  const {floatingStyles, refs, context} = useFloating({
     open,
     onOpenChange: setOpen,
     placement: 'bottom-start',
@@ -46,20 +46,19 @@ export const Main = ({orientation = 'horizontal', loop = false}: Props) => {
     <>
       <h1>Grid</h1>
       <div className="container">
-        <button ref={reference} {...getReferenceProps()}>
+        <button ref={refs.setReference} {...getReferenceProps()}>
           Reference
         </button>
         {open && (
           <FloatingFocusManager context={context}>
             <div
-              ref={floating}
+              role="menu"
+              ref={refs.setFloating}
               data-testid="floating"
+              className="grid gap-2"
               style={{
-                display: 'grid',
+                ...floatingStyles,
                 gridTemplateColumns: '100px 100px 100px 100px 100px',
-                position: strategy,
-                left: x ?? 0,
-                top: y ?? 0,
                 zIndex: 999,
               }}
               {...getFloatingProps()}
@@ -68,11 +67,13 @@ export const Main = ({orientation = 'horizontal', loop = false}: Props) => {
                 <button
                   role="option"
                   key={index}
-                  tabIndex={-1}
+                  aria-selected={activeIndex === index}
+                  tabIndex={activeIndex === index ? 0 : -1}
                   disabled={disabledIndices.includes(index)}
                   ref={(node) => {
                     listRef.current[index] = node;
                   }}
+                  className="border border-black disabled:opacity-20"
                   {...getItemProps()}
                 >
                   Item {index}

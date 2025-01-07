@@ -1,11 +1,23 @@
+<PageCard>
+
 # Middleware
 
-Middleware are plain objects that modify the positioning
-coordinates in some fashion, or provide useful data for the
-consumer to use.
+Objects that change the positioning of the floating element,
+executed in order as a queue.
 
-`computePosition(){:js}` starts with basic positioning via
-`placement{:.objectKey}`:
+</PageCard>
+
+Middleware allow you to customize the behavior of the positioning
+and be as granular as you want, adding your own custom logic.
+
+`computePosition(){:js}` starts with initial positioning via
+`placement{:.key}` — then middleware are executed as an
+in-between "middle" step of the initial placement computation and
+eventual return of data for rendering.
+
+Each middleware is executed in order:
+
+<ShowFor packages={['dom', 'core']}>
 
 ```js
 computePosition(referenceEl, floatingEl, {
@@ -14,9 +26,29 @@ computePosition(referenceEl, floatingEl, {
 });
 ```
 
-Middleware are executed as an in-between "middle" step of the
-basic placement computation and eventual return of data to the
-caller.
+</ShowFor>
+
+<ShowFor packages={['react', 'react-dom', 'react-native']}>
+
+```js
+useFloating({
+  placement: 'right',
+  middleware: [],
+});
+```
+
+</ShowFor>
+
+<ShowFor packages={['vue']}>
+
+```js
+useFloating(reference, floating, {
+  placement: 'right',
+  middleware: [],
+});
+```
+
+</ShowFor>
 
 ## Example
 
@@ -34,7 +66,9 @@ const shiftByOnePixel = {
 
 This (not particularly useful) middleware adds `1{:js}` pixel to
 the coordinates. To use this middleware, add it to your
-`middleware{:.objectKey}` array:
+`middleware{:.key}` array:
+
+<ShowFor packages={['dom', 'core']}>
 
 ```js
 computePosition(referenceEl, floatingEl, {
@@ -43,25 +77,62 @@ computePosition(referenceEl, floatingEl, {
 });
 ```
 
+</ShowFor>
+
+<ShowFor packages={['react', 'react-dom', 'react-native']}>
+
+```js
+useFloating({
+  placement: 'right',
+  middleware: [shiftByOnePixel],
+});
+```
+
+</ShowFor>
+
+<ShowFor packages={['vue']}>
+
+```js
+useFloating(reference, floating, {
+  placement: 'right',
+  middleware: [shiftByOnePixel],
+});
+```
+
+</ShowFor>
+
+<ShowFor packages={['core', 'dom']}>
+
 Here, `computePosition(){:js}` will compute coordinates that will
-place the floating element to the right center of the reference
-element, lying flush with it. Middleware are then executed,
-resulting in these coordinates getting shifted by one pixel. Then
-that data is returned to the caller.
+place the floating element to the `right{:.string}` center of the
+reference element, lying flush with it.
+
+</ShowFor>
+
+<ShowFor packages={['react', 'react-dom', 'react-native', 'vue']}>
+
+Here, `useFloating(){:js}` will compute coordinates that will
+place the floating element to the `right{:.string}` center of the
+reference element, lying flush with it.
+
+</ShowFor>
+
+Middleware are then executed, resulting in these coordinates
+getting shifted by one pixel. Then that data is returned for
+rendering.
 
 ### Shape
 
-A middleware is an object which has a `name{:.objectKey}`
-property and a `fn{:.function}` property. The `fn{:.function}`
-property provides the logic of the middleware, which returns new
-positioning coordinates or useful data.
+A middleware is an object that has a `name{:.key}` property and a
+`fn{:.function}` property. The `fn{:.function}` property provides
+the logic of the middleware, which returns new positioning
+coordinates or useful data.
 
 ### Data
 
-Any data can be passed via an optional `data{:.objectKey}`
-property of the object that is returned from `fn{:.function}`.
-This will be accessible to the consumer via the
-`middlewareData{:.param}` property:
+Any data can be passed via an optional `data{:.key}` property of
+the object that is returned from `fn{:.function}`. This will be
+accessible to the consumer via the `middlewareData` property:
 
 ```js {7-9}
 const shiftByOnePixel = {
@@ -78,6 +149,8 @@ const shiftByOnePixel = {
 };
 ```
 
+<ShowFor packages={['core', 'dom']}>
+
 ```js
 computePosition(referenceEl, floatingEl, {
   middleware: [shiftByOnePixel],
@@ -86,10 +159,37 @@ computePosition(referenceEl, floatingEl, {
 });
 ```
 
+</ShowFor>
+
+<ShowFor packages={['react', 'react-dom', 'react-native']}>
+
+```js
+const {middlewareData} = useFloating({
+  middleware: [shiftByOnePixel],
+});
+console.log(middlewareData.shiftByOnePixel);
+```
+
+</ShowFor>
+
+<ShowFor packages={['vue']}>
+
+```js
+const {middlewareData} = useFloating(reference, floating, {
+  middleware: [shiftByOnePixel],
+});
+
+// Available once mounted and positioned as:
+// `middlewareData.value.shiftByOnePixel`
+```
+
+</ShowFor>
+
 ### Function
 
-You may notice that Floating UI's core middleware are actually
-functions. This is so you can pass options in:
+You may notice that Floating UI's packaged middleware are
+actually functions. This is so you can pass options in, changing
+how the middleware behaves:
 
 ```js
 const shiftByAmount = (amount = 0) => ({
@@ -109,9 +209,8 @@ behavior:
 const middleware = [shiftByAmount(10)];
 ```
 
-The `options{:.objectKey}` key on a middleware object allows
-libraries like React to compare and update middleware on
-component re-renders.
+The `options{:.key}` key on a middleware object holds the
+dependencies, allowing deep comparison reactivity.
 
 ### Always return an object
 
@@ -120,7 +219,7 @@ need to contain properties, but to remind you that it should be
 pure, you must return an object. Never mutate any values that get
 passed in from `fn{:.function}`.
 
-## MiddlewareArguments
+## MiddlewareState
 
 An object is passed to `fn{:.function}` containing useful data
 about the middleware lifecycle being executed.
@@ -133,7 +232,9 @@ there are many more.
 The properties passed are below:
 
 ```ts
-type MiddlewareArguments = Coords & {
+interface MiddlewareState {
+  x: number;
+  y: number;
   initialPlacement: Placement;
   placement: Placement;
   strategy: Strategy;
@@ -141,52 +242,51 @@ type MiddlewareArguments = Coords & {
   elements: Elements;
   rects: ElementRects;
   platform: Platform;
-};
+}
 ```
 
-### x
+### `x{:.key}`
 
 This is the x-axis coordinate to position the floating element
 to.
 
-### y
+### `y{:.key}`
 
 This is the y-axis coordinate to position the floating element
 to.
 
-### elements
+### `elements{:.key}`
 
 This is an object containing the reference and floating elements.
 
-### rects
+### `rects{:.key}`
 
 This is an object containing the `Rect{:.class}`s of the
 reference and floating elements, an object of shape
 `{width, height, x, y}`.
 
-### middlewareData
+### `middlewareData{:.key}`
 
 This is an object containing all the data of any middleware at
 the current step in the lifecycle. The lifecycle loops over the
-`middleware{:.objectKey}` array, so later middleware have access
-to data from any middleware run prior.
+`middleware{:.key}` array, so later middleware have access to
+data from any middleware run prior.
 
-### strategy
+### `strategy{:.key}`
 
 The positioning strategy.
 
-### initialPlacement
+### `initialPlacement{:.key}`
 
 The initial (or preferred) placement passed in to
 `computePosition(){:js}`.
 
-### placement
+### `placement{:.key}`
 
 The stateful resultant placement. Middleware like
-`flip{:.function}` change `initialPlacement{:.objectKey}` to a
-new one.
+`flip{:.function}` change `initialPlacement{:.key}` to a new one.
 
-### platform
+### `platform{:.key}`
 
 An object containing methods to make Floating UI work on the
 current platform, e.g. DOM or React Native.
@@ -243,7 +343,7 @@ so that other middleware perform fresh logic.
 - When `flip(){:js}` and `autoPlacement(){:js}` change the
   placement, they reset the lifecycle so that other middleware
   that modify the coordinates based on the current
-  `placement{:.objectKey}` do not perform stale logic.
+  `placement{:.key}` do not perform stale logic.
 - `size(){:js}` resets the lifecycle with the newly applied
   dimensions, as many middleware read the dimensions to perform
   their logic.
@@ -251,7 +351,7 @@ so that other middleware perform fresh logic.
   reference rect to a custom implementation, similar to a
   [Virtual Element](/docs/virtual-elements).
 
-In order to do this, add a `reset{:.objectKey}` property to the
+In order to do this, add a `reset{:.key}` property to the
 returned object from `fn{:.function}`.
 
 ```ts

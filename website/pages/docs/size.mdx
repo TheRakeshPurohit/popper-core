@@ -1,14 +1,74 @@
+<PageCard className="mb-8">
+
 # size
 
-`size(){:js}` provides data to change the size of the floating
-element. For instance, you can resize it so it doesn't overflow
-the available space:
+Provides data to change the size of a floating element.
+
+<MiddlewareContainer>
+  <MiddlewareBadge type="Visibility Optimizer" />
+  <MiddlewareBadge type="Data Provider" />
+</MiddlewareContainer>
+
+<ShowFor packages={['core']}>
+
+```js
+import {size} from '@floating-ui/core';
+```
+
+</ShowFor>
+
+<ShowFor packages={['dom']}>
+
+```js
+import {size} from '@floating-ui/dom';
+```
+
+</ShowFor>
+
+<ShowFor packages={['react']}>
+
+```js
+import {size} from '@floating-ui/react';
+```
+
+</ShowFor>
+
+<ShowFor packages={['react-dom']}>
+
+```js
+import {size} from '@floating-ui/react-dom';
+```
+
+</ShowFor>
+
+<ShowFor packages={['vue']}>
+
+```js
+import {size} from '@floating-ui/vue';
+```
+
+</ShowFor>
+
+<ShowFor packages={['react-native']}>
+
+```js
+import {size} from '@floating-ui/react-native';
+```
+
+</ShowFor>
+
+This is useful to ensure the floating element isn't too big to
+fit in the viewport (or more specifically, its clipping context),
+especially when a maximum size isn't specified. It also allows
+matching the width/height of the reference element.
+
+</PageCard>
 
 <div className="flex flex-col gap-4">
   <Chrome
     label="Scroll the container"
     center
-    scrollable
+    scrollable="y"
     className="h-96"
   >
     <Floating
@@ -17,30 +77,52 @@ the available space:
         overflow: 'hidden',
         maxHeight: 0,
       }}
-      middleware={[{name: 'size', options: {padding: 5}}]}
+      middleware={[
+        {
+          name: 'size',
+          options: {padding: 5, rootBoundary: 'document'},
+        },
+      ]}
     >
-      <div className="grid place-items-center w-32 h-32 border-2 border-gray-1000 border-dashed" />
+      <div className="grid h-32 w-32 place-items-center border-2 border-dashed border-gray-1000" />
     </Floating>
   </Chrome>
 </div>
 
-If your floating element's content cannot be resized such as in
-the example, you can make the floating element scrollable with
-`overflow: scroll{:sass}` (or `auto{:.param}`).
-
 ## Usage
 
-```js
-import {computePosition, size} from '@floating-ui/dom';
+If your floating element's content cannot be resized such as in
+the example, you can make the floating element scrollable with
+`overflow: scroll{:sass}` (or `auto{:.param}`). Ensure your CSS
+is using `box-sizing: border-box{:sass}`!
 
+<ShowFor packages={['core']}>
+
+```js
 computePosition(referenceEl, floatingEl, {
   middleware: [
     size({
       apply({availableWidth, availableHeight, elements}) {
-        // Do things with the data, e.g.
+        // Change styles
+      },
+    }),
+  ],
+});
+```
+
+</ShowFor>
+
+<ShowFor packages={['dom']}>
+
+```js
+computePosition(referenceEl, floatingEl, {
+  middleware: [
+    size({
+      apply({availableWidth, availableHeight, elements}) {
+        // Change styles, e.g.
         Object.assign(elements.floating.style, {
-          maxWidth: `${availableWidth}px`,
-          maxHeight: `${availableHeight}px`,
+          maxWidth: `${Math.max(0, availableWidth)}px`,
+          maxHeight: `${Math.max(0, availableHeight)}px`,
         });
       },
     }),
@@ -48,24 +130,90 @@ computePosition(referenceEl, floatingEl, {
 });
 ```
 
-Ensure your CSS is using `box-sizing: border-box{:sass}`!
+</ShowFor>
+
+<ShowFor packages={['vue']}>
+
+```js
+useFloating(reference, floating, {
+  middleware: [
+    size({
+      apply({availableWidth, availableHeight, elements}) {
+        // Change styles, e.g.
+        Object.assign(elements.floating.style, {
+          maxWidth: `${Math.max(0, availableWidth)}px`,
+          maxHeight: `${Math.max(0, availableHeight)}px`,
+        });
+      },
+    }),
+  ],
+});
+```
+
+</ShowFor>
+
+<ShowFor packages={['react', 'react-dom']}>
+
+1. You can use sync state, and apply using the `style{:.keyword}`
+   prop during render, achieved via `flushSync(){:js}`:
+
+```js
+import {flushSync} from 'react-dom';
+```
+
+```js {6-8}  /maxHeight/
+const [maxHeight, setMaxHeight] = useState(null);
+
+const {refs, floatingStyles} = useFloating({
+  middleware: [
+    size({
+      apply({availableHeight}) {
+        flushSync(() => setMaxHeight(availableHeight));
+      },
+    }),
+  ],
+});
+
+return (
+  <div
+    ref={refs.setFloating}
+    style={{...floatingStyles, maxHeight}}
+  />
+);
+```
+
+2. Or, mutate the style property directly:
+
+```js
+useFloating({
+  middleware: [
+    size({
+      apply({availableHeight, elements}) {
+        elements.floating.style.maxHeight = `${availableHeight}px`;
+      },
+    }),
+  ],
+});
+```
+
+</ShowFor>
 
 ## Options
 
 These are the options you can pass to `size(){:js}`.
 
 ```ts
-interface Options extends DetectOverflowOptions {
+interface SizeOptions extends DetectOverflowOptions {
   apply?: (
-    args: MiddlewareArguments & {
+    state: MiddlewareState & {
       availableWidth: number;
       availableHeight: number;
-    }
+    },
   ) => void;
 }
 ```
 
-### apply
+### `apply{:.function}`
 
 default: `undefined{:js}`
 
@@ -76,57 +224,66 @@ lifecycle:
 
 ```js
 size({
-  apply({
-    availableWidth,
-    availableHeight,
-    ...middlewareArguments
-  }) {
+  apply({availableWidth, availableHeight, ...state}) {
     // Style mutations here
   },
 });
 ```
 
-#### availableWidth
+#### `availableWidth{:.param}`
 
 Represents how wide the floating element can be before it will
 overflow its clipping context. You'll generally set this as the
-`maxWidth{:.objectKey}` CSS property.
+`maxWidth{:.key}` CSS property.
 
-#### availableHeight
+#### `availableHeight{:.param}`
 
 Represents how tall the floating element can be before it will
 overflow its clipping context. You'll generally set this as the
-`maxHeight{:.objectKey}` CSS property.
+`maxHeight{:.key}` CSS property.
 
-#### ...middlewareArguments
+<Notice>
+  Both properties can be negative. When applying max styles, you should clamp them above `0{:js}`.
+</Notice>
 
-See [MiddlewareArguments](/docs/middleware#middlewarearguments).
+#### ...middlewareState
+
+See [MiddlewareState](/docs/middleware#middlewarestate).
 
 Many useful properties are also accessible via this callback,
-such as `rects{:.objectKey}` and `elements{:.objectKey}`, the
-latter of which is useful in the context of React where you need
-access to the floating element and it does not exist in scope.
+such as `rects{:.key}` and `elements{:.key}`.
 
 ### ...detectOverflowOptions
 
-All of [detectOverflow](/docs/detectOverflow#options)'s options
+All of [`detectOverflow`](/docs/detectOverflow#options)'s options
 can be passed. For instance:
 
 ```js
 size({padding: 5}); // 0 by default
 ```
 
-## Using with flip
+### Deriving options from state
+
+You can derive the options from the
+[middleware lifecycle state](/docs/middleware#middlewarestate):
+
+```js
+size((state) => ({
+  padding: state.rects.reference.width,
+}));
+```
+
+## Using with `flip(){:js}`
 
 Using `size(){:js}` together with `flip(){:js}` enables some
 useful behavior. The floating element can be resized, thus
 allowing it to prefer its initial placement as much as possible,
 until it reaches a minimum size, at which point it will flip.
 
-If you're using the `padding{:.objectKey}` option in either
-middleware, ensure they share the **same value**.
+If you're using the `padding{:.key}` option in either middleware,
+ensure they share the **same value**.
 
-### bestFit
+### `bestFit{:.string}`
 
 The `'bestFit'{:js}` fallback strategy in the `flip(){:js}`
 middleware is the default, which ensures the best fitting
@@ -148,7 +305,7 @@ const middleware = [
   <Chrome
     label="Scroll the container"
     center
-    scrollable
+    scrollable="y"
     className="h-96"
   >
     <Floating
@@ -158,11 +315,17 @@ const middleware = [
         maxHeight: 0,
       }}
       middleware={[
-        {name: 'flip', options: {padding: 5}},
-        {name: 'size', options: {padding: 5}},
+        {
+          name: 'flip',
+          options: {padding: 5, rootBoundary: 'document'},
+        },
+        {
+          name: 'size',
+          options: {padding: 5, rootBoundary: 'document'},
+        },
       ]}
     >
-      <div className="grid place-items-center w-32 h-32 border-2 border-gray-1000 border-dashed" />
+      <div className="grid h-32 w-32 place-items-center border-2 border-dashed border-gray-1000" />
     </Floating>
   </Chrome>
 </div>
@@ -170,13 +333,13 @@ const middleware = [
 This strategy ensures the floating element stays in view at all
 times at the most optimal size.
 
-### initialPlacement
+### `initialPlacement{:.string}`
 
 If instead, you want the initial placement to take precedence,
 and are setting a minimum acceptable size, place `size(){:js}`
 **before** `flip(){:js}`:
 
-```js
+```js {12}
 const middleware = [
   size({
     apply({availableHeight, elements}) {
@@ -200,12 +363,29 @@ the width of the reference regardless of its contents. You can
 also use `size(){:js}` for this, as the `Rect{:.class}`s get
 passed in:
 
-```js /rects/
+```js
 size({
-  apply({rects}) {
-    Object.assign(floatingEl.style, {
-      width: `${rects.reference.width}px`,
+  apply({rects, elements}) {
+    Object.assign(elements.floating.style, {
+      minWidth: `${rects.reference.width}px`,
     });
   },
 });
+```
+
+## Troubleshooting
+
+### `maxHeight` style left on floating element
+
+Leaving the `maxHeight` style on the floating element can cause
+issues in certain situations where it can and should expand more.
+By removing the style inside the `apply{:.function}` function
+when the `scrollHeight` is less than the `availableHeight`, you
+can prevent this:
+
+```js
+elements.floating.style.maxHeight =
+  availableHeight >= elements.floating.scrollHeight
+    ? ''
+    : `${availableHeight}px`;
 ```

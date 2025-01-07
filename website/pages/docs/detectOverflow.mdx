@@ -1,31 +1,77 @@
+<PageCard>
+
 # detectOverflow
 
-This function computes the overflow offsets of either the
-reference or floating element relative to any clipping
-boundaries.
+Detects when the floating or reference element is overflowing a
+clipping container or custom boundary.
 
-Almost every middleware provided by the library uses this
-function, making it useful for your own custom middleware.
-
-The function takes two arguments and returns a promise:
+<ShowFor packages={['core']}>
 
 ```js
-await detectOverflow(middlewareArguments, options);
+import {detectOverflow} from '@floating-ui/core';
 ```
+
+</ShowFor>
+
+<ShowFor packages={['dom']}>
+
+```js
+import {detectOverflow} from '@floating-ui/dom';
+```
+
+</ShowFor>
+
+<ShowFor packages={['react']}>
+
+```js
+import {detectOverflow} from '@floating-ui/react';
+```
+
+</ShowFor>
+
+<ShowFor packages={['react-dom']}>
+
+```js
+import {detectOverflow} from '@floating-ui/react-dom';
+```
+
+</ShowFor>
+
+<ShowFor packages={['vue']}>
+
+```js
+import {detectOverflow} from '@floating-ui/vue';
+```
+
+</ShowFor>
+
+<ShowFor packages={['react-native']}>
+
+```js
+import {detectOverflow} from '@floating-ui/react-native';
+```
+
+</ShowFor>
+
+</PageCard>
+
+A clipping container (or boundary) is one that causes child
+elements inside it to be clipped if they overflow it. Visibility
+optimizer middleware use this function for **collision
+detection**, making it useful for your own custom middleware that
+do the same.
 
 ## Usage
 
 Inside your custom middleware, make your `fn{:.function}`
-`async{:.keyword}` and `await{:js}` it, passing in the
-`middlewareArguments{:.param}`:
+`async{:.keyword}` and `await{:js}` it, passing in the middleware
+`state{:.param}`:
 
 ```js
-import {detectOverflow} from '@floating-ui/dom';
-
 const middleware = {
   name: 'middleware',
-  async fn(middlewareArguments) {
-    const overflow = await detectOverflow(middlewareArguments);
+  async fn(state) {
+    const overflow = await detectOverflow(state);
     return {};
   },
 };
@@ -46,32 +92,46 @@ representing offsets.
 `detectOverflow(){:js}` takes options as a second argument.
 
 ```js
-await detectOverflow(middlewareArguments, {
+await detectOverflow(state, {
   // options
 });
 ```
 
-### boundary
-
 ```ts
-type Boundary = 'clippingAncestors' | Element | Array<Element>;
+interface DetectOverflowOptions {
+  boundary: Boundary;
+  rootBoundary: RootBoundary;
+  elementContext: ElementContext;
+  altBoundary: boolean;
+  padding: Padding;
+}
 ```
 
-This describes the clipping element(s) that overflow will be
-checked relative to. The default is `'clippingAncestors'{:js}`,
-which are the overflow ancestors which will cause the element to
-be clipped.
+### `boundary{:.key}`
+
+```ts
+type Boundary =
+  | 'clippingAncestors'
+  | Element
+  | Array<Element>
+  | Rect;
+```
+
+This describes the clipping element(s) or area that overflow will
+be checked relative to. The default is
+`'clippingAncestors'{:js}`, which are the overflow ancestors
+which will cause the element to be clipped.
 
 ```js
-await detectOverflow(middlewareArguments, {
+await detectOverflow(state, {
   boundary: document.querySelector('#container'),
 });
 ```
 
-### rootBoundary
+### `rootBoundary{:.key}`
 
 ```ts
-type RootBoundary = 'viewport' | 'document';
+type RootBoundary = 'viewport' | 'document' | Rect;
 ```
 
 This describes the root boundary that the element will be checked
@@ -82,16 +142,31 @@ the
 which correctly handles pinch-zooming and mobile viewports when
 the keyboard is open.
 
-The other option is `'document'{:js}`, which is the entire page
-outside the viewport.
+The other string option is `'document'{:js}`, which is the entire
+page outside the viewport.
 
 ```js
-await detectOverflow(middlewareArguments, {
+await detectOverflow(state, {
   rootBoundary: 'document', // 'viewport' by default
 });
 ```
 
-### padding
+You may also pass a `Rect{:.class}` object to define a custom
+boundary area (relative to the viewport).
+
+```js
+await detectOverflow(state, {
+  // Layout viewport, instead of the visual viewport
+  rootBoundary: {
+    x: 0,
+    y: 0,
+    width: document.documentElement.clientWidth,
+    height: document.documentElement.clientHeight,
+  },
+});
+```
+
+### `padding{:.key}`
 
 ```ts
 type Padding =
@@ -108,7 +183,7 @@ This describes the virtual padding around the boundary to check
 for overflow.
 
 ```js
-await detectOverflow(middlewareArguments, {
+await detectOverflow(state, {
   // 5px on all sides
   padding: 5,
   // Unspecified sides are 0
@@ -119,7 +194,7 @@ await detectOverflow(middlewareArguments, {
 });
 ```
 
-### elementContext
+### `elementContext{:.key}`
 
 ```ts
 type ElementContext = 'reference' | 'floating';
@@ -132,24 +207,24 @@ But you can also change the context to `'reference'{:js}` to
 instead check its overflow relative to its clipping boundary.
 
 ```js
-await detectOverflow(middlewareArguments, {
+await detectOverflow(state, {
   elementContext: 'reference', // 'floating' by default
 });
 ```
 
-### altBoundary
+### `altBoundary{:.key}`
 
 This is a boolean value which determines whether to check the
-alternate `elementContext{:.objectKey}`'s boundary.
+alternate `elementContext{:.key}`'s boundary.
 
-For instance, if the `elementContext{:.objectKey}` is
+For instance, if the `elementContext{:.key}` is
 `'floating'{:js}`, and you enable this option, then the boundary
 in which overflow is checked for is the `'reference'{:js}`'s
 boundary. This only applies if you are using the default
-`'clippingAncestors'{:js}` string as the `boundary{:.objectKey}`.
+`'clippingAncestors'{:js}` string as the `boundary{:.key}`.
 
 ```js
-await detectOverflow(middlewareArguments, {
+await detectOverflow(state, {
   altBoundary: true, // false by default
 });
 ```

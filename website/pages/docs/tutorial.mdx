@@ -1,6 +1,13 @@
 import * as T from '../../lib/components/Tutorial';
 
+<PageCard>
+
 # Tutorial
+
+Build a tooltip from scratch and learn how to use Floating UI's
+positioning toolkit.
+
+</PageCard>
 
 This page teaches you the fundamentals of Floating UI's
 positioning by building a tooltip from scratch. If you just want
@@ -9,13 +16,14 @@ to start learning about the API, skip to the
 
 ## Before proceeding
 
-This library is intentionally low-level and its only goal is to
-provide "anchor positioning". Think of it like a polyfill for a
-missing CSS feature. Pre-built styles are not provided, and user
-interactions are only available for React users.
+The vanilla package of this library is a JavaScript-based layout
+engine for "anchor positioning". It acts as a polyfill for CSS to
+correctly position absolutely-positioned anchored elements on the
+document.
 
-If you're looking for something simple out of the box, you may
-find other libraries are better suited for your use case.
+If you're looking for pre-built components or something simple
+out of the box, you may find other libraries are better suited
+for your use case.
 
 ## Setting up
 
@@ -23,7 +31,7 @@ Create a new HTML document with two elements, a `<button>{:html}`
 and a tooltip `<div>{:html}`:
 
 ```html
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Floating UI Tutorial</title>
@@ -51,7 +59,7 @@ default styling):
 Let's give our tooltip some styling:
 
 ```html
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Floating UI Tutorial</title>
@@ -135,7 +143,7 @@ tooltip elements as arguments.
 It returns a `Promise{:.class}`, so we use the `.then(){:js}`
 method which passes in the calculated `x{:.param}` and
 `y{:.param}` coordinates for us, which we use to assign
-`left{:.objectKey}` and `top{:.objectKey}` styles to the tooltip.
+`left{:.key}` and `top{:.key}` styles to the tooltip.
 
 Our tooltip is now centered underneath the button:
 
@@ -145,8 +153,8 @@ Our tooltip is now centered underneath the button:
 
 The default placement is `'bottom'{:js}`, but you probably want
 to place the tooltip anywhere relative to the button. For this,
-Floating UI has the `placement{:.objectKey}` option, passed into
-the options object as a third argument:
+Floating UI has the `placement{:.key}` option, passed into the
+options object as a third argument:
 
 ```js {7}
 import {computePosition} from 'https://cdn.jsdelivr.net/npm/@floating-ui/dom@__DOM_VERSION__/+esm';
@@ -232,10 +240,9 @@ computePosition(button, tooltip, {
 });
 ```
 
-Now, even though we've set `placement{:.objectKey}` to
-`'top'{:js}`, the tooltip flips to the bottom automatically for
-us if it can't fit on the top. No need to adjust anything
-manually.
+Now, even though we've set `placement{:.key}` to `'top'{:js}`,
+the tooltip flips to the bottom automatically for us if it can't
+fit on the top. No need to adjust anything manually.
 
 <T.Result7 />
 
@@ -491,10 +498,10 @@ placements.
 - `y` is the y-axis offset, only existing if the placement is
   horizontal (`'right'{:js}` or `'left'{:js}`).
 
-`staticSide{:js}` depends on the `placement{:.objectKey}` that
-gets chosen. For instance, if the placement is `'bottom'{:js}`,
-then we want the arrow to be positioned 4px outside of the
-**top** of the tooltip (so we use a negative number).
+`staticSide{:js}` depends on the `placement{:.key}` that gets
+chosen. For instance, if the placement is `'bottom'{:js}`, then
+we want the arrow to be positioned 4px outside of the **top** of
+the tooltip (so we use a negative number).
 
 The reason we use `.split('-')[0]{:js}` is to also handle aligned
 placements, like `'top-start'{:js}` rather than only
@@ -559,7 +566,7 @@ Try hovering or focusing the button:
 ## Misc
 
 To keep the tooltip anchored to the button while scrolling or
-resizing, you'll want to use the [autoUpdate](/docs/autoUpdate)
+resizing, you'll want to use the [`autoUpdate`](/docs/autoUpdate)
 utility.
 
 As for animations, this is up to you to explore when crafting

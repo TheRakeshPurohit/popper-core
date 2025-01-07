@@ -10,7 +10,7 @@
 </div>
 
 A
-[dialog](https://www.w3.org/WAI/ARIA/apg/example-index/dialog-modal/dialog)
+[dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/examples/dialog/)
 is a floating element that displays information that requires
 immediate attention, appearing over the page content and blocking
 interactions with the page until it is dismissed.
@@ -26,10 +26,10 @@ differences:
 
 ## Essentials
 
-An accessible dialog component has the following:
+An accessible dialog component has the following qualities:
 
 - **Dismissal**: When the user presses the `esc` key or outside
-  the dialog while the it is open, it closes.
+  the dialog while it is open, it closes.
 - **Role**: The elements are given relevant role and ARIA
   attributes to be accessible to screen readers.
 - **Focus management**: Focus is fully trapped inside the dialog
@@ -58,45 +58,46 @@ Let's walk through the example:
 import {useState} from 'react';
 
 function Dialog() {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 }
 ```
 
-The `open{:.const}` state determines whether or not the dialog is
+`isOpen{:.const}` determines whether or not the dialog is
 currently open on the screen. It is used for conditional
 rendering.
 
-### useFloating hook
+### useFloating Hook
 
-The `useFloating(){:js}` hook provides context for our dialog. We
+The `useFloating(){:js}` Hook provides context for our dialog. We
 need to pass it some information:
 
-- `open`: The open state from our `useState(){:js}` hook above.
-- `onOpenChange{:.objectKey}`: A callback function that will be
-  called when the dialog is opened or closed. We'll use this to
-  update our `open{:.const}` state.
+- `open{:.key}`: The open state from our `useState(){:js}` Hook
+  above.
+- `onOpenChange{:.key}`: A callback function that will be called
+  when the dialog is opened or closed. We'll use this to update
+  our `isOpen{:.const}` state.
 
 ```js /useFloating/
 import {useFloating} from '@floating-ui/react';
 
 function Dialog() {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const {reference, floating, context} = useFloating({
-    open,
-    onOpenChange: setOpen,
+  const {refs, context} = useFloating({
+    open: isOpen,
+    onOpenChange: setIsOpen,
   });
 }
 ```
 
-### Interaction hooks
+### Interaction Hooks
 
-Interaction hooks return objects containing keys of props that
+Interaction Hooks return objects containing keys of props that
 enable the dialog to be opened, closed, or accessible to screen
 readers.
 
-Using the `context{:.const}` that was returned from the hook,
-call the interaction hooks:
+Using the `context{:.const}` that was returned from the Hook,
+call the interaction Hooks:
 
 ```js /context/
 import {
@@ -109,11 +110,11 @@ import {
 } from '@floating-ui/react';
 
 function Dialog() {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const {reference, floating, context} = useFloating({
-    open,
-    onOpenChange: setOpen,
+  const {refs, context} = useFloating({
+    open: isOpen,
+    onOpenChange: setIsOpen,
   });
 
   const click = useClick(context);
@@ -140,7 +141,7 @@ function Dialog() {
   be attached to a reference element though, so this is optional.
 - `useDismiss(){:js}` adds the ability to dismiss the dialog when
   the user presses the `esc` key or presses outside of the
-  dialog. The `outsidePressEvent{:.objectKey}` option is set to
+  dialog. The `outsidePressEvent{:.key}` option is set to
   `'mousedown'{:js}` so that touch events become lazy and do not
   fall through the backdrop, as the default behavior is eager.
 - `useRole(){:js}` adds the correct ARIA attributes for a
@@ -157,7 +158,7 @@ After this:
 
 ### Rendering
 
-Now we have all the variables and hooks set up, we can render out
+Now we have all the variables and Hooks set up, we can render out
 our elements.
 
 ```js
@@ -165,24 +166,24 @@ function Dialog() {
   // ...
   return (
     <>
-      <button ref={reference} {...getReferenceProps()}>
+      <button ref={refs.setReference} {...getReferenceProps()}>
         Reference element
       </button>
-      {open && (
+      {isOpen && (
         <FloatingOverlay
           lockScroll
           style={{background: 'rgba(0, 0, 0, 0.8)'}}
         >
           <FloatingFocusManager context={context}>
             <div
-              ref={floating}
+              ref={refs.setFloating}
               aria-labelledby={labelId}
               aria-describedby={descriptionId}
               {...getFloatingProps()}
             >
               <h2 id={labelId}>Heading element</h2>
               <p id={descriptionId}>Description element</p>
-              <button onClick={() => setOpen(false)}>
+              <button onClick={() => setIsOpen(false)}>
                 Close
               </button>
             </div>
@@ -196,18 +197,18 @@ function Dialog() {
 
 - `{...getReferenceProps()}{:js}` /
   `{...getFloatingProps()}{:js}` spreads the props from the
-  interaction hooks onto the relevant elements. They contain
+  interaction Hooks onto the relevant elements. They contain
   props like `onClick{:.keyword}`, `aria-expanded{:.keyword}`,
   etc.
 - `<FloatingOverlay />{:js}` is a component that renders a
   backdrop overlay element behind the floating element, with the
   ability to lock the body scroll.
-  [FloatingOverlay docs](/docs/FloatingOverlay).
+  [`FloatingOverlay` docs](/docs/FloatingOverlay).
 - `<FloatingFocusManager />{:js}` is a component that manages
   focus of the dialog for modal behavior, trapping focus inside.
   It should directly wrap the floating element and only be
   rendered when the dialog is also rendered.
-  [FloatingFocusManager docs](/docs/FloatingFocusManager).
+  [`FloatingFocusManager` docs](/docs/FloatingFocusManager).
 
 ## Reusable dialog component
 
@@ -215,7 +216,7 @@ function Dialog() {
 
 It is better to create a reusable component API that can be used
 in a variety of different scenarios more easily. We can place all
-of our hooks into a single custom hook for better reusability,
+of our Hooks into a single custom Hook for better reusability,
 which is then used by a controller component which encapsulates
 the state.
 

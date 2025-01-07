@@ -95,6 +95,7 @@ main {
 .reference {
   display: grid;
   place-items: center;
+  font: inherit;
   width: 160px;
   height: 160px;
   background: #ed4f73;
@@ -107,6 +108,7 @@ main {
   background: turquoise;
   width: 80px;
   height: 80px;
+  outline: none;
 }
 
 .arrow {
@@ -132,7 +134,7 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  width: 700px;
+  width: 100%;
   background: #edeff7;
   padding: 16px;
 }
@@ -191,6 +193,15 @@ main {
   width: fit-content;
   padding: 5px;
   border-radius: 5px;
+  display: none;
+}
+
+.resize {
+  resize: both;
+  max-height: 480px;
+  max-width: 480px;
+  min-height: 120px;
+  min-width: 120px;
 }
 
 .prose {

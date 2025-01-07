@@ -1,14 +1,14 @@
 import {
-  MutableRefObject,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react';
-import {getOverflowAncestors, useFloating, shift} from '@floating-ui/react-dom';
-import {VirtualElement} from '@floating-ui/core';
-import {isElement} from '../../../src/utils/is';
+  getOverflowAncestors,
+  shift,
+  useFloating,
+  type VirtualElement,
+} from '@floating-ui/react-dom';
+import type {MutableRefObject} from 'react';
+import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
+
+import {isElement} from '../../../src/platform/isElement';
 
 export const useScroll = ({
   refs,
@@ -25,8 +25,7 @@ export const useScroll = ({
   const {
     x,
     y,
-    reference,
-    floating,
+    refs: floatingRefs,
     strategy,
     update: indicatorUpdate,
   } = useFloating({
@@ -92,13 +91,13 @@ export const useScroll = ({
   }, [refs.floating, refs.reference, update, indicatorUpdate, rtl]);
 
   useLayoutEffect(() => {
-    reference(refs.reference.current);
-  }, [reference, refs.reference]);
+    floatingRefs.setReference(refs.reference.current);
+  }, [floatingRefs, refs.reference]);
 
   const indicator = (
     <div
       className="scroll-indicator"
-      ref={floating}
+      ref={floatingRefs.setFloating}
       style={{
         position: strategy,
         top: y ?? '',

@@ -1,3 +1,20 @@
-export * from '@floating-ui/dom';
+export type * from './types';
 export {useFloating} from './useFloating';
-export {arrow} from './arrow';
+export {
+  autoUpdate,
+  computePosition,
+  detectOverflow,
+  getOverflowAncestors,
+  platform,
+} from '@floating-ui/dom';
+export {
+  arrow,
+  autoPlacement,
+  flip,
+  hide,
+  inline,
+  limitShift,
+  offset,
+  shift,
+  size,
+} from './reactiveMiddleware';

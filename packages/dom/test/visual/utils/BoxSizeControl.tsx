@@ -1,5 +1,5 @@
-import {Controls} from './Controls';
 import {boxSizes} from './box-sizes';
+import {Controls} from './Controls';
 
 type Props = {
   id: string;
@@ -19,7 +19,7 @@ export function BoxSizeControl({id, label, onChange, size}: Props) {
             data-testid={`${id}-${boxSize}`}
             onClick={() => onChange(boxSize)}
             style={{
-              backgroundColor: boxSize === size ? 'black' : ''
+              backgroundColor: boxSize === size ? 'black' : '',
             }}
           >
             {boxSize}
