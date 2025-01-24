@@ -1,14 +1,73 @@
+<PageCard>
+
 # hide
 
-`hide(){:js}` provides data to hide the floating element in
-applicable situations, usually when it's not within the same
-clipping context as the reference element.
+A data provider that allows you to hide the floating element in
+applicable situations.
+
+<MiddlewareContainer>
+  <MiddlewareBadge type="Data Provider" />
+</MiddlewareContainer>
+
+<ShowFor packages={['core']}>
+
+```js
+import {hide} from '@floating-ui/core';
+```
+
+</ShowFor>
+
+<ShowFor packages={['dom']}>
+
+```js
+import {hide} from '@floating-ui/dom';
+```
+
+</ShowFor>
+
+<ShowFor packages={['react']}>
+
+```js
+import {hide} from '@floating-ui/react';
+```
+
+</ShowFor>
+
+<ShowFor packages={['react-dom']}>
+
+```js
+import {hide} from '@floating-ui/react-dom';
+```
+
+</ShowFor>
+
+<ShowFor packages={['vue']}>
+
+```js
+import {hide} from '@floating-ui/vue';
+```
+
+</ShowFor>
+
+<ShowFor packages={['react-native']}>
+
+```js
+import {hide} from '@floating-ui/react-native';
+```
+
+</ShowFor>
+
+This is useful for situations where you want to hide the floating
+element because it appears detached from the reference element
+(or attached to nothing).
+
+</PageCard>
 
 <div className="flex flex-col gap-4">
   <Chrome
     label="Scroll up"
     center
-    scrollable
+    scrollable="y"
     className="h-96"
     scrollHeight={325}
   >
@@ -16,30 +75,91 @@ clipping context as the reference element.
       portaled
       middleware={[{name: 'offset', options: 5}, {name: 'hide'}]}
     >
-      <div className="grid place-items-center w-32 h-32 border-2 border-gray-1000 border-dashed" />
+      <div className="grid h-32 w-32 place-items-center border-2 border-dashed border-gray-1000" />
     </Floating>
   </Chrome>
 </div>
 
-In the above example, the floating element turns red once it has
-`escaped{:.objectKey}` the reference element's clipping context.
-Once the reference element is hidden, it hides itself.
+In the above example, the floating element turns partially
+transparent once it has `escaped{:.key}` the reference element's
+clipping context. Once the reference element is hidden, it hides
+itself.
 
 ## Usage
 
-```js
-import {computePosition, hide} from '@floating-ui/dom';
+Apply a hidden visibility style to the floating element based on
+the data in `middlewareData.hide{:js}`:
 
+<ShowFor packages={['core', 'dom']}>
+
+```js
 computePosition(referenceEl, floatingEl, {
   middleware: [hide()],
 }).then(({middlewareData}) => {
-  const {referenceHidden} = middlewareData.hide;
-
-  Object.assign(floatingEl.style, {
-    visibility: referenceHidden ? 'hidden' : 'visible',
-  });
+  if (middlewareData.hide) {
+    Object.assign(floatingEl.style, {
+      visibility: middlewareData.hide.referenceHidden
+        ? 'hidden'
+        : 'visible',
+    });
+  }
 });
 ```
+
+</ShowFor>
+
+<ShowFor packages={['react', 'react-dom', 'react-native']}>
+
+```js /middlewareData/
+const {refs, floatingStyles, middlewareData} = useFloating({
+  middleware: [hide()],
+});
+
+return (
+  <div
+    ref={refs.setFloating}
+    style={{
+      ...floatingStyles,
+      visibility: middlewareData.hide?.referenceHidden
+        ? 'hidden'
+        : 'visible',
+    }}
+  />
+);
+```
+
+</ShowFor>
+
+<ShowFor packages={['vue']}>
+
+```vue /middlewareData/
+<script setup>
+const reference = ref(null);
+const floating = ref(null);
+const {floatingStyles, middlewareData} = useFloating(
+  reference,
+  floating,
+  {
+    middleware: [hide()],
+  },
+);
+</script>
+
+<template>
+  <div ref="reference"></div>
+  <div
+    ref="floating"
+    :style="{
+      ...floatingStyles,
+      visibility: middlewareData.hide?.referenceHidden
+        ? 'hidden'
+        : 'visible',
+    }"
+  ></div>
+</template>
+```
+
+</ShowFor>
 
 ## Order
 
@@ -50,20 +170,22 @@ middleware array.
 
 These are the options you can pass to `hide(){:js}`.
 
-```js
-interface Options extends DetectOverflowOptions {
+```ts
+interface HideOptions extends DetectOverflowOptions {
   strategy?: 'referenceHidden' | 'escaped';
 }
 ```
 
-### strategy
+### `strategy{:.key}`
 
 default: `'referenceHidden'{:js}`
 
-Specifies the type of hiding strategy to use.
+The strategy used to determine when to hide the floating element.
 
 ```js
-hide({strategy: 'escaped'}); // 'referenceHidden' by default
+hide({
+  strategy: 'escaped', // 'referenceHidden' by default
+});
 ```
 
 If you'd like to use multiple strategies, call `hide(){:js}`
@@ -71,11 +193,24 @@ multiple times in your middleware array with different options.
 
 ### ...detectOverflowOptions
 
-All of [detectOverflow](/docs/detectOverflow#options)'s options
+All of [`detectOverflow`](/docs/detectOverflow#options)'s options
 can be passed. For instance:
 
 ```js
-hide({padding: 5}); // 0 by default
+hide({
+  padding: 5, // 0 by default
+});
+```
+
+### Deriving options from state
+
+You can derive the options from the
+[middleware lifecycle state](/docs/middleware#middlewarestate):
+
+```js
+hide((state) => ({
+  padding: state.rects.reference.width,
+}));
 ```
 
 ## Data
@@ -92,7 +227,7 @@ interface Data {
 Depending on the strategy used, these options may exist in the
 data object.
 
-### referenceHidden
+### `referenceHidden{:.key}`
 
 Determines whether the reference element is fully clipped, and is
 therefore hidden from view.
@@ -100,15 +235,15 @@ therefore hidden from view.
 Note that “hidden” means clipping, `visibility` and `opacity`
 styles are not considered.
 
-### referenceHiddenOffsets
+### `referenceHiddenOffsets{:.key}`
 
 A side object containing overflow offsets.
 
-### escaped
+### `escaped{:.key}`
 
 Determines whether the floating element has "escaped" the
 reference's clipping context and appears fully detached from it.
 
-### escapedOffsets
+### `escapedOffsets{:.key}`
 
 A side object containing overflow offsets.

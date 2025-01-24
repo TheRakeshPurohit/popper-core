@@ -1,65 +1,94 @@
+<PageCard>
+
 # FloatingPortal
 
-Portals your floating element outside the main app node.
+Portals the floating element into a given container element — by
+default, outside of the app root and into the body.
 
 ```js
 import {FloatingPortal} from '@floating-ui/react';
+```
 
+This is necessary to ensure the floating element can appear
+outside any potential parent containers that cause clipping (such
+as `overflow: hidden`), while retaining its location in the React
+tree.
+
+<ShowFor packages={['react-dom']}>
+
+<PackageLimited>@floating-ui/react only</PackageLimited>
+
+</ShowFor>
+
+</PageCard>
+
+```js
 function Tooltip() {
-  return (
-    <FloatingPortal>
-      {open && <div>My portalled element</div>}
-    </FloatingPortal>
-  );
+  if (isOpen) {
+    return (
+      <FloatingPortal>
+        <div>Floating element</div>
+      </FloatingPortal>
+    );
+  }
+
+  return null;
 }
 ```
 
-<Notice type="error" title="Important">
-  Don't conditionally render the FloatingPortal, only its
-  children as seen above.
+Context is provided so that portals nested in one another are
+appended to their respective parent.
+
+<Notice>
+  The portal component should be conditionally rendered based on
+  the `isOpen` or mounted state (as seen above), rather than
+  always rendered. This prevents a portal container from being
+  mounted to the DOM when not in use.
 </Notice>
 
 ## Props
 
-```js
-interface Props {
+```ts
+interface FloatingPortalProps {
+  root?:
+    | HTMLElement
+    | null
+    | React.MutableRefObject<HTMLElement | null>;
   id?: string;
-  root?: HTMLElement | null;
   preserveTabOrder?: boolean;
 }
 ```
 
-### id
+### `root{:.keyword}`
 
-default: `undefined{:js}`
-
-If this node does not exist on the document, it will be created
-for you and will be appended to the end of the `<body>{:html}`. A
-unique React id is assigned to it. Context is provided so that
-portals nested in one another are appended to their respective
-parent.
-
-By specifying a string, it assumes the container is being
-controlled externally or is static.
+Optionally specifies the root node the portal container will be
+appended to.
 
 ```js
-<FloatingPortal id="custom-root-id">
-  {open && <div>Tooltip</div>}
-</FloatingPortal>
+// Element
+<FloatingPortal root={rootNode} />
+// MutableRefObject
+<FloatingPortal root={rootNodeRef} />
 ```
 
-### root
+<Notice>
+  If the `rootNode` doesn't exist when the portal is mounted,
+  ensure you pass an element directly (not a ref) and specify
+  `null` as the default value before it is set. This lets it wait
+  for the root to be available.
+</Notice>
 
-Alternatively, you may pass the root element itself, which
-supports shadow roots.
+### `id{:.keyword}`
+
+Optionally selects the node with the id if it exists, or create
+it and append it to the specified root (by default
+`document.body{:js}`).
 
 ```js
-<FloatingPortal root={shadowRootNode}>
-  {open && <div>Tooltip</div>}
-</FloatingPortal>
+<FloatingPortal id="custom-root-id" />
 ```
 
-### preserveTabOrder
+### `preserveTabOrder{:.keyword}`
 
 default: `true{:js}`
 
@@ -68,26 +97,22 @@ When using non-modal focus management using
 context based on the React tree instead of the DOM tree.
 
 ```js
-<FloatingPortal preserveTabOrder={false}>
-  {open && <div>Tooltip</div>}
-</FloatingPortal>
+<FloatingPortal preserveTabOrder={false} />
 ```
 
-## useFloatingPortalNode
+## `useFloatingPortalNode(){:js}`
 
 Exposes the portal container node for custom use in other
-components. The hook injects the node, if it does not yet exist
-in the DOM.
+components.
 
 ```js
 function App() {
   const portalNode = useFloatingPortalNode({
-    id: 'custom-root-id', // 'floating-ui-root' by default
-    enabled: false, // true by default
+    // Accepts `id` and `root` props
   });
 
   if (portalNode) {
-    return ReactDOM.createPortal(<div></div>, portalNode);
+    return createPortal(<div />, portalNode);
   }
 
   return null;

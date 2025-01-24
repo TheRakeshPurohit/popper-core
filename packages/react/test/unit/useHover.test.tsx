@@ -1,16 +1,18 @@
+import {act, cleanup, fireEvent, render, screen} from '@testing-library/react';
 import {useState} from 'react';
-import {cleanup, fireEvent, render, screen, act} from '@testing-library/react';
-import {useHover, useInteractions, useFloating} from '../../src';
-import type {Props} from '../../src/hooks/useHover';
+import {vi} from 'vitest';
 
-jest.useFakeTimers();
+import {useFloating, useHover, useInteractions} from '../../src';
+import type {UseHoverProps} from '../../src/hooks/useHover';
+
+vi.useFakeTimers();
 
 function App({
   showReference = true,
   ...props
-}: Props & {showReference?: boolean}) {
+}: UseHoverProps & {showReference?: boolean}) {
   const [open, setOpen] = useState(false);
-  const {reference, floating, context} = useFloating({
+  const {refs, context} = useFloating({
     open,
     onOpenChange: setOpen,
   });
@@ -20,8 +22,12 @@ function App({
 
   return (
     <>
-      {showReference && <button {...getReferenceProps({ref: reference})} />}
-      {open && <div role="tooltip" {...getFloatingProps({ref: floating})} />}
+      {showReference && (
+        <button {...getReferenceProps({ref: refs.setReference})} />
+      )}
+      {open && (
+        <div role="tooltip" {...getFloatingProps({ref: refs.setFloating})} />
+      )}
     </>
   );
 }
@@ -52,13 +58,13 @@ describe('delay', () => {
     fireEvent.mouseEnter(screen.getByRole('button'));
 
     await act(async () => {
-      jest.advanceTimersByTime(999);
+      vi.advanceTimersByTime(999);
     });
 
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
 
     await act(async () => {
-      jest.advanceTimersByTime(1);
+      vi.advanceTimersByTime(1);
     });
 
     expect(screen.queryByRole('tooltip')).toBeInTheDocument();
@@ -72,13 +78,13 @@ describe('delay', () => {
     fireEvent.mouseEnter(screen.getByRole('button'));
 
     await act(async () => {
-      jest.advanceTimersByTime(499);
+      vi.advanceTimersByTime(499);
     });
 
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
 
     await act(async () => {
-      jest.advanceTimersByTime(1);
+      vi.advanceTimersByTime(1);
     });
 
     expect(screen.queryByRole('tooltip')).toBeInTheDocument();
@@ -93,13 +99,13 @@ describe('delay', () => {
     fireEvent.mouseLeave(screen.getByRole('button'));
 
     await act(async () => {
-      jest.advanceTimersByTime(499);
+      vi.advanceTimersByTime(499);
     });
 
     expect(screen.queryByRole('tooltip')).toBeInTheDocument();
 
     await act(async () => {
-      jest.advanceTimersByTime(1);
+      vi.advanceTimersByTime(1);
     });
 
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
@@ -113,13 +119,27 @@ describe('delay', () => {
     fireEvent.mouseEnter(screen.getByRole('button'));
 
     await act(async () => {
-      jest.advanceTimersByTime(499);
+      vi.advanceTimersByTime(499);
     });
 
     fireEvent.mouseLeave(screen.getByRole('button'));
 
     await act(async () => {
-      jest.advanceTimersByTime(1);
+      vi.advanceTimersByTime(1);
+    });
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    cleanup();
+  });
+
+  test('restMs + nullish open delay should respect restMs', async () => {
+    render(<App restMs={100} delay={{close: 100}} />);
+
+    fireEvent.mouseEnter(screen.getByRole('button'));
+
+    await act(async () => {
+      vi.advanceTimersByTime(99);
     });
 
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
@@ -131,38 +151,156 @@ describe('delay', () => {
 test('restMs', async () => {
   render(<App restMs={100} />);
 
-  fireEvent.mouseMove(screen.getByRole('button'));
+  const button = screen.getByRole('button');
 
-  await act(async () => {
-    jest.advanceTimersByTime(99);
+  const originalDispatchEvent = button.dispatchEvent;
+  const spy = vi.spyOn(button, 'dispatchEvent').mockImplementation((event) => {
+    Object.defineProperty(event, 'movementX', {value: 10});
+    Object.defineProperty(event, 'movementY', {value: 10});
+    return originalDispatchEvent.call(button, event);
   });
 
-  fireEvent.mouseMove(screen.getByRole('button'));
+  fireEvent.mouseMove(button);
 
   await act(async () => {
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(99);
+  });
+
+  fireEvent.mouseMove(button);
+
+  await act(async () => {
+    vi.advanceTimersByTime(1);
   });
 
   expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
 
-  fireEvent.mouseMove(screen.getByRole('button'));
+  fireEvent.mouseMove(button);
 
   await act(async () => {
-    jest.advanceTimersByTime(100);
+    vi.advanceTimersByTime(100);
   });
 
   expect(screen.queryByRole('tooltip')).toBeInTheDocument();
 
+  spy.mockRestore();
   cleanup();
 });
 
-test('continues working after reference is conditionally rendered', () => {
-  const {rerender} = render(<App showReference={false} />);
-  rerender(<App showReference />);
+test('restMs is always 0 for touch input', async () => {
+  render(<App restMs={100} />);
 
-  fireEvent.mouseEnter(screen.getByRole('button'));
+  fireEvent.pointerDown(screen.getByRole('button'), {pointerType: 'touch'});
+  fireEvent.mouseMove(screen.getByRole('button'));
+
+  await act(async () => {});
+
+  expect(screen.queryByRole('tooltip')).toBeInTheDocument();
+});
+
+test('restMs does not cause floating element to open if mouseOnly is true', async () => {
+  render(<App restMs={100} mouseOnly />);
+
+  fireEvent.pointerDown(screen.getByRole('button'), {pointerType: 'touch'});
+  fireEvent.mouseMove(screen.getByRole('button'));
+
+  await act(async () => {});
+
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+});
+
+test('restMs does not reset timer for minor mouse movement', async () => {
+  render(<App restMs={100} />);
+
+  const button = screen.getByRole('button');
+
+  const originalDispatchEvent = button.dispatchEvent;
+  const spy = vi.spyOn(button, 'dispatchEvent').mockImplementation((event) => {
+    Object.defineProperty(event, 'movementX', {value: 1});
+    Object.defineProperty(event, 'movementY', {value: 0});
+    return originalDispatchEvent.call(button, event);
+  });
+
+  fireEvent.mouseMove(button);
+
+  await act(async () => {
+    vi.advanceTimersByTime(99);
+  });
+
+  fireEvent.mouseMove(button);
+
+  await act(async () => {
+    vi.advanceTimersByTime(1);
+  });
 
   expect(screen.queryByRole('tooltip')).toBeInTheDocument();
 
+  spy.mockRestore();
   cleanup();
+});
+
+test('mouseleave on the floating element closes it (mouse)', async () => {
+  render(<App />);
+
+  fireEvent.mouseEnter(screen.getByRole('button'));
+  await act(async () => {});
+
+  fireEvent(
+    screen.getByRole('button'),
+    new MouseEvent('mouseleave', {
+      relatedTarget: screen.getByRole('tooltip'),
+    }),
+  );
+
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+});
+
+test('does not show after delay if domReference changes', async () => {
+  const {rerender} = render(<App delay={1000} />);
+
+  fireEvent.mouseEnter(screen.getByRole('button'));
+
+  await act(async () => {
+    vi.advanceTimersByTime(1);
+  });
+
+  rerender(<App showReference={false} />);
+
+  await act(async () => {
+    vi.advanceTimersByTime(999);
+  });
+
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+  cleanup();
+});
+
+test('reason string', async () => {
+  function App() {
+    const [isOpen, setIsOpen] = useState(false);
+    const {refs, context} = useFloating({
+      open: isOpen,
+      onOpenChange(isOpen, _, reason) {
+        setIsOpen(isOpen);
+        expect(reason).toBe('hover');
+      },
+    });
+
+    const hover = useHover(context);
+    const {getReferenceProps, getFloatingProps} = useInteractions([hover]);
+
+    return (
+      <>
+        <button ref={refs.setReference} {...getReferenceProps()} />
+        {isOpen && (
+          <div role="tooltip" ref={refs.setFloating} {...getFloatingProps()} />
+        )}
+      </>
+    );
+  }
+
+  render(<App />);
+  const button = screen.getByRole('button');
+  fireEvent.mouseEnter(button);
+  await act(async () => {});
+  fireEvent.mouseLeave(button);
 });

@@ -1,38 +1,83 @@
+<PageCard>
+
 # useClick
 
-Adds click event listeners that change the open state.
+Opens or closes the floating element when clicking the reference
+element.
 
 ```js
 import {useClick} from '@floating-ui/react';
 ```
 
-Inside your component:
+<ShowFor packages={['react-dom']}>
 
-```js /useClick/
-const {context} = useFloating();
-const click = useClick(context);
-const {getReferenceProps, getFloatingProps} = useInteractions([
-  click,
-]);
+<PackageLimited>@floating-ui/react only</PackageLimited>
+
+</ShowFor>
+
+</PageCard>
+
+## Usage
+
+This Hook returns event handler props.
+
+To use it, pass it the `context{:.const}` object returned from
+`useFloating(){:js}`, and then feed its result into the
+`useInteractions(){:js}` array. The returned prop getters are
+then spread onto the elements for rendering.
+
+```js {9-13} /context/
+function App() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const {refs, floatingStyles, context} = useFloating({
+    open: isOpen,
+    onOpenChange: setIsOpen,
+  });
+
+  const click = useClick(context);
+
+  const {getReferenceProps, getFloatingProps} = useInteractions([
+    click,
+  ]);
+
+  return (
+    <>
+      <div ref={refs.setReference} {...getReferenceProps()}>
+        Reference element
+      </div>
+      {isOpen && (
+        <div
+          ref={refs.setFloating}
+          style={floatingStyles}
+          {...getFloatingProps()}
+        >
+          Floating element
+        </div>
+      )}
+    </>
+  );
+}
 ```
 
 ## Props
 
-```js
-interface Props {
+```ts
+interface UseClickProps {
   enabled?: boolean;
   event?: 'click' | 'mousedown';
   toggle?: boolean;
   ignoreMouse?: boolean;
   keyboardHandlers?: boolean;
+  stickIfOpen?: boolean;
 }
 ```
 
-### enabled
+### `enabled{:.key}`
 
 default: `true{:js}`
 
-Conditionally enable/disable the hook.
+Conditionally enable/disable the Hook.
 
 ```js
 useClick(context, {
@@ -40,7 +85,7 @@ useClick(context, {
 });
 ```
 
-### event
+### `event{:.key}`
 
 default: `'click'{:js}`
 
@@ -53,7 +98,7 @@ useClick(context, {
 });
 ```
 
-### toggle
+### `toggle{:.key}`
 
 default: `true{:js}`
 
@@ -65,17 +110,12 @@ useClick(context, {
 });
 ```
 
-### ignoreMouse
+### `ignoreMouse{:.key}`
 
 default: `false{:js}`
 
 Whether to ignore the logic for mouse input (for example, if
 `useHover(){:js}` is also being used).
-
-When `useHover(){:js}` and `useClick(){:js}` are used together,
-clicking the reference element after hovering it will keep the
-floating element open even once the cursor leaves. This may be
-not be desirable in some cases.
 
 ```js
 useClick(context, {
@@ -83,7 +123,7 @@ useClick(context, {
 });
 ```
 
-### keyboardHandlers
+### `keyboardHandlers{:.key}`
 
 default: `true{:js}`
 
@@ -94,5 +134,19 @@ floating element via keyboard "click").
 ```js
 useClick(context, {
   keyboardHandlers: false,
+});
+```
+
+### `stickIfOpen{:.key}`
+
+default: `true{:js}`
+
+If already open from another event such as the `useHover(){:js}`
+Hook, determines whether to keep the floating element open when
+clicking the reference element for the first time.
+
+```js
+useClick(context, {
+  stickIfOpen: false,
 });
 ```

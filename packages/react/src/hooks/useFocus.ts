@@ -1,36 +1,58 @@
+import {
+  activeElement,
+  contains,
+  getDocument,
+  getTarget,
+  isMac,
+  isSafari,
+  isTypeableElement,
+  isVirtualPointerEvent,
+} from '@floating-ui/react/utils';
+import {getWindow, isElement, isHTMLElement} from '@floating-ui/utils/dom';
 import * as React from 'react';
-import type {ElementProps, FloatingContext, ReferenceType} from '../types';
-import {activeElement} from '../utils/activeElement';
-import {contains} from '../utils/contains';
-import {getDocument} from '../utils/getDocument';
-import {isHTMLElement, isElement} from '../utils/is';
-import {isEventTargetWithin} from '../utils/isEventTargetWithin';
-import {DismissPayload} from './useDismiss';
 
-export interface Props {
+import type {
+  ElementProps,
+  FloatingRootContext,
+  OpenChangeReason,
+} from '../types';
+import {createAttribute} from '../utils/createAttribute';
+
+export interface UseFocusProps {
+  /**
+   * Whether the Hook is enabled, including all internal Effects and event
+   * handlers.
+   * @default true
+   */
   enabled?: boolean;
-  keyboardOnly?: boolean;
+  /**
+   * Whether the open state only changes if the focus event is considered
+   * visible (`:focus-visible` CSS selector).
+   * @default true
+   */
+  visibleOnly?: boolean;
 }
 
 /**
- * Adds focus event listeners that change the open state, like CSS :focus.
+ * Opens the floating element while the reference element has focus, like CSS
+ * `:focus`.
  * @see https://floating-ui.com/docs/useFocus
  */
-export const useFocus = <RT extends ReferenceType = ReferenceType>(
-  {open, onOpenChange, dataRef, refs, events}: FloatingContext<RT>,
-  {enabled = true, keyboardOnly = true}: Props = {}
-): ElementProps => {
-  const pointerTypeRef = React.useRef('');
+export function useFocus(
+  context: FloatingRootContext,
+  props: UseFocusProps = {},
+): ElementProps {
+  const {open, onOpenChange, events, dataRef, elements} = context;
+  const {enabled = true, visibleOnly = true} = props;
+
   const blockFocusRef = React.useRef(false);
-  const timeoutRef = React.useRef<any>();
+  const timeoutRef = React.useRef<number>();
+  const keyboardModalityRef = React.useRef(true);
 
   React.useEffect(() => {
-    if (!enabled) {
-      return;
-    }
+    if (!enabled) return;
 
-    const doc = getDocument(refs.floating.current);
-    const win = doc.defaultView ?? window;
+    const win = getWindow(elements.domReference);
 
     // If the reference was focused and the user left the tab/window, and the
     // floating element was not open, the focus should be blocked when they
@@ -38,34 +60,38 @@ export const useFocus = <RT extends ReferenceType = ReferenceType>(
     function onBlur() {
       if (
         !open &&
-        isHTMLElement(refs.domReference.current) &&
-        refs.domReference.current ===
-          activeElement(getDocument(refs.domReference.current))
+        isHTMLElement(elements.domReference) &&
+        elements.domReference ===
+          activeElement(getDocument(elements.domReference))
       ) {
         blockFocusRef.current = true;
       }
     }
 
-    win.addEventListener('blur', onBlur);
-    return () => {
-      win.removeEventListener('blur', onBlur);
-    };
-  }, [refs, open, enabled]);
-
-  React.useEffect(() => {
-    if (!enabled) {
-      return;
+    function onKeyDown() {
+      keyboardModalityRef.current = true;
     }
 
-    function onDismiss(payload: DismissPayload) {
-      if (payload.type === 'referencePress' || payload.type === 'escapeKey') {
+    win.addEventListener('blur', onBlur);
+    win.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      win.removeEventListener('blur', onBlur);
+      win.removeEventListener('keydown', onKeyDown, true);
+    };
+  }, [elements.domReference, open, enabled]);
+
+  React.useEffect(() => {
+    if (!enabled) return;
+
+    function onOpenChange({reason}: {reason: OpenChangeReason}) {
+      if (reason === 'reference-press' || reason === 'escape-key') {
         blockFocusRef.current = true;
       }
     }
 
-    events.on('dismiss', onDismiss);
+    events.on('openchange', onOpenChange);
     return () => {
-      events.off('dismiss', onDismiss);
+      events.off('openchange', onOpenChange);
     };
   }, [events, enabled]);
 
@@ -75,69 +101,87 @@ export const useFocus = <RT extends ReferenceType = ReferenceType>(
     };
   }, []);
 
-  return React.useMemo(() => {
-    if (!enabled) {
-      return {};
-    }
+  const reference: ElementProps['reference'] = React.useMemo(
+    () => ({
+      onPointerDown(event) {
+        if (isVirtualPointerEvent(event.nativeEvent)) return;
+        keyboardModalityRef.current = false;
+      },
+      onMouseLeave() {
+        blockFocusRef.current = false;
+      },
+      onFocus(event) {
+        if (blockFocusRef.current) return;
 
-    return {
-      reference: {
-        onPointerDown({pointerType}) {
-          pointerTypeRef.current = pointerType;
-          blockFocusRef.current = !!(pointerType && keyboardOnly);
-        },
-        onMouseLeave() {
-          blockFocusRef.current = false;
-        },
-        onFocus(event) {
-          if (blockFocusRef.current) {
-            return;
+        const target = getTarget(event.nativeEvent);
+
+        if (visibleOnly && isElement(target)) {
+          try {
+            // Mac Safari unreliably matches `:focus-visible` on the reference
+            // if focus was outside the page initially - use the fallback
+            // instead.
+            if (isSafari() && isMac()) throw Error();
+            if (!target.matches(':focus-visible')) return;
+          } catch (e) {
+            // Old browsers will throw an error when using `:focus-visible`.
+            if (!keyboardModalityRef.current && !isTypeableElement(target)) {
+              return;
+            }
           }
+        }
 
-          // Dismiss with click should ignore the subsequent `focus` trigger,
-          // but only if the click originated inside the reference element.
+        onOpenChange(true, event.nativeEvent, 'focus');
+      },
+      onBlur(event) {
+        blockFocusRef.current = false;
+        const relatedTarget = event.relatedTarget;
+        const nativeEvent = event.nativeEvent;
+
+        // Hit the non-modal focus management portal guard. Focus will be
+        // moved into the floating element immediately after.
+        const movedToFocusGuard =
+          isElement(relatedTarget) &&
+          relatedTarget.hasAttribute(createAttribute('focus-guard')) &&
+          relatedTarget.getAttribute('data-type') === 'outside';
+
+        // Wait for the window blur listener to fire.
+        timeoutRef.current = window.setTimeout(() => {
+          const activeEl = activeElement(
+            elements.domReference
+              ? elements.domReference.ownerDocument
+              : document,
+          );
+
+          // Focus left the page, keep it open.
+          if (!relatedTarget && activeEl === elements.domReference) return;
+
+          // When focusing the reference element (e.g. regular click), then
+          // clicking into the floating element, prevent it from hiding.
+          // Note: it must be focusable, e.g. `tabindex="-1"`.
+          // We can not rely on relatedTarget to point to the correct element
+          // as it will only point to the shadow host of the newly focused element
+          // and not the element that actually has received focus if it is located
+          // inside a shadow root.
           if (
-            event.type === 'focus' &&
-            dataRef.current.openEvent?.type === 'mousedown' &&
-            dataRef.current.openEvent &&
-            isEventTargetWithin(
-              dataRef.current.openEvent,
-              refs.domReference.current
-            )
+            contains(
+              dataRef.current.floatingContext?.refs.floating.current,
+              activeEl,
+            ) ||
+            contains(elements.domReference, activeEl) ||
+            movedToFocusGuard
           ) {
             return;
           }
 
-          dataRef.current.openEvent = event.nativeEvent;
-          onOpenChange(true);
-        },
-        onBlur(event) {
-          blockFocusRef.current = false;
-          const relatedTarget = event.relatedTarget;
-
-          // Hit the non-modal focus management portal guard. Focus will be
-          // moved into the floating element immediately after.
-          const movedToFocusGuard =
-            isElement(relatedTarget) &&
-            relatedTarget.hasAttribute('data-floating-ui-focus-guard');
-
-          // Wait for the window blur listener to fire.
-          timeoutRef.current = setTimeout(() => {
-            // When focusing the reference element (e.g. regular click), then
-            // clicking into the floating element, prevent it from hiding.
-            // Note: it must be focusable, e.g. `tabindex="-1"`.
-            if (
-              contains(refs.floating.current, relatedTarget) ||
-              contains(refs.domReference.current, relatedTarget) ||
-              movedToFocusGuard
-            ) {
-              return;
-            }
-
-            onOpenChange(false);
-          });
-        },
+          onOpenChange(false, nativeEvent, 'focus');
+        });
       },
-    };
-  }, [enabled, keyboardOnly, refs, dataRef, onOpenChange]);
-};
+    }),
+    [dataRef, elements.domReference, onOpenChange, visibleOnly],
+  );
+
+  return React.useMemo(
+    () => (enabled ? {reference} : {}),
+    [enabled, reference],
+  );
+}

@@ -1,16 +1,21 @@
-import {fireEvent, render, screen, cleanup} from '@testing-library/react';
+import {act, cleanup, fireEvent, render, screen} from '@testing-library/react';
 import {useState} from 'react';
-import {useClick, useFloating, useInteractions} from '../../src';
-import type {Props} from '../../src/hooks/useClick';
+
+import {useClick, useFloating, useHover, useInteractions} from '../../src';
+import type {UseClickProps} from '../../src/hooks/useClick';
 
 function App({
   button = true,
   typeable = false,
   initialOpen = false,
   ...props
-}: Props & {button?: boolean; typeable?: boolean; initialOpen?: boolean}) {
+}: UseClickProps & {
+  button?: boolean;
+  typeable?: boolean;
+  initialOpen?: boolean;
+}) {
   const [open, setOpen] = useState(initialOpen);
-  const {reference, floating, context} = useFloating({
+  const {refs, context} = useFloating({
     open,
     onOpenChange: setOpen,
   });
@@ -22,8 +27,13 @@ function App({
 
   return (
     <>
-      <Tag {...getReferenceProps({ref: reference})} data-testid="reference" />
-      {open && <div role="tooltip" {...getFloatingProps({ref: floating})} />}
+      <Tag
+        {...getReferenceProps({ref: refs.setReference})}
+        data-testid="reference"
+      />
+      {open && (
+        <div role="tooltip" {...getFloatingProps({ref: refs.setFloating})} />
+      )}
     </>
   );
 }
@@ -132,8 +142,70 @@ describe('`toggle` prop', () => {
   });
 });
 
-describe('`ignoreMouse` prop', () => {
-  // TODO — not sure how to test this in JSDOM
+describe('`stickIfOpen` prop', async () => {
+  function App({stickIfOpen}: {stickIfOpen?: boolean}) {
+    const [open, setOpen] = useState(false);
+    const {refs, context} = useFloating({
+      open,
+      onOpenChange: setOpen,
+    });
+    const {getReferenceProps, getFloatingProps} = useInteractions([
+      useHover(context),
+      useClick(context, {stickIfOpen}),
+    ]);
+
+    return (
+      <>
+        <button
+          {...getReferenceProps({ref: refs.setReference})}
+          data-testid="reference"
+        />
+        {open && (
+          <div role="tooltip" {...getFloatingProps({ref: refs.setFloating})} />
+        )}
+      </>
+    );
+  }
+
+  test('true: `open` state remains `true` after click and mouseleave', () => {
+    render(<App stickIfOpen />);
+
+    const button = screen.getByRole('button');
+
+    fireEvent.mouseEnter(button);
+
+    fireEvent.click(button);
+
+    expect(screen.queryByRole('tooltip')).toBeInTheDocument();
+
+    fireEvent.mouseLeave(button);
+
+    expect(screen.queryByRole('tooltip')).toBeInTheDocument();
+
+    cleanup();
+  });
+
+  test('false: `open` state becomes `false` after click and mouseleave', () => {
+    render(<App stickIfOpen={false} />);
+
+    const button = screen.getByRole('button');
+
+    fireEvent.mouseEnter(button);
+
+    fireEvent.click(button);
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    fireEvent.click(button);
+
+    expect(screen.queryByRole('tooltip')).toBeInTheDocument();
+
+    fireEvent.click(button);
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    cleanup();
+  });
 });
 
 describe('non-buttons', () => {
@@ -151,6 +223,7 @@ describe('non-buttons', () => {
     render(<App button={false} />);
 
     const button = screen.getByTestId('reference');
+    fireEvent.keyDown(button, {key: ' '});
     fireEvent.keyUp(button, {key: ' '});
 
     expect(screen.queryByRole('tooltip')).toBeInTheDocument();
@@ -177,4 +250,46 @@ describe('non-buttons', () => {
     expect(screen.queryByRole('tooltip')).toBeInTheDocument();
     cleanup();
   });
+});
+
+test('ignores Space keydown on another element then keyup on the button', async () => {
+  render(<App />);
+  await act(async () => {});
+
+  const button = screen.getByRole('button');
+  fireEvent.keyDown(document.body, {key: ' '});
+  fireEvent.keyUp(button, {key: ' '});
+
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+});
+
+test('reason string', async () => {
+  function App() {
+    const [isOpen, setIsOpen] = useState(false);
+    const {refs, context} = useFloating({
+      open: isOpen,
+      onOpenChange(isOpen, _, reason) {
+        setIsOpen(isOpen);
+        expect(reason).toBe('click');
+      },
+    });
+
+    const focus = useClick(context);
+    const {getReferenceProps, getFloatingProps} = useInteractions([focus]);
+
+    return (
+      <>
+        <button ref={refs.setReference} {...getReferenceProps()} />
+        {isOpen && (
+          <div role="tooltip" ref={refs.setFloating} {...getFloatingProps()} />
+        )}
+      </>
+    );
+  }
+
+  render(<App />);
+  const button = screen.getByRole('button');
+  fireEvent.click(button);
+  await act(async () => {});
+  fireEvent.click(button);
 });

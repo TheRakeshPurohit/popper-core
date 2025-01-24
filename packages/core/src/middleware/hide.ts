@@ -1,9 +1,9 @@
-import type {Middleware, Rect, SideObject} from '../types';
-import {sides} from '../enums';
-import {
-  detectOverflow,
-  Options as DetectOverflowOptions,
-} from '../detectOverflow';
+import type {Rect, SideObject} from '@floating-ui/utils';
+import {evaluate, sides} from '@floating-ui/utils';
+
+import type {DetectOverflowOptions} from '../detectOverflow';
+import {detectOverflow} from '../detectOverflow';
+import type {Derivable, Middleware} from '../types';
 
 function getSideOffsets(overflow: SideObject, rect: Rect) {
   return {
@@ -18,8 +18,11 @@ function isAnySideFullyClipped(overflow: SideObject) {
   return sides.some((side) => overflow[side] >= 0);
 }
 
-export interface Options {
-  strategy: 'referenceHidden' | 'escaped';
+export interface HideOptions extends DetectOverflowOptions {
+  /**
+   * The strategy used to determine when to hide the floating element.
+   */
+  strategy?: 'referenceHidden' | 'escaped';
 }
 
 /**
@@ -28,17 +31,21 @@ export interface Options {
  * @see https://floating-ui.com/docs/hide
  */
 export const hide = (
-  options: Partial<Options & DetectOverflowOptions> = {}
+  options: HideOptions | Derivable<HideOptions> = {},
 ): Middleware => ({
   name: 'hide',
   options,
-  async fn(middlewareArguments) {
-    const {strategy = 'referenceHidden', ...detectOverflowOptions} = options;
-    const {rects} = middlewareArguments;
+  async fn(state) {
+    const {rects} = state;
+
+    const {strategy = 'referenceHidden', ...detectOverflowOptions} = evaluate(
+      options,
+      state,
+    );
 
     switch (strategy) {
       case 'referenceHidden': {
-        const overflow = await detectOverflow(middlewareArguments, {
+        const overflow = await detectOverflow(state, {
           ...detectOverflowOptions,
           elementContext: 'reference',
         });
@@ -51,7 +58,7 @@ export const hide = (
         };
       }
       case 'escaped': {
-        const overflow = await detectOverflow(middlewareArguments, {
+        const overflow = await detectOverflow(state, {
           ...detectOverflowOptions,
           altBoundary: true,
         });

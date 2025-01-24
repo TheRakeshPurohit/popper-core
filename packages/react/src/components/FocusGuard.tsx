@@ -1,7 +1,8 @@
+import {isSafari} from '@floating-ui/react/utils';
 import * as React from 'react';
-import useIsomorphicLayoutEffect from 'use-isomorphic-layout-effect';
-import {isMac, isSafari} from '../utils/is';
-import {useEvent} from '../hooks/utils/useEvent';
+import useModernLayoutEffect from 'use-isomorphic-layout-effect';
+
+import {createAttribute} from '../utils/createAttribute';
 
 // See Diego Haz's Sandbox for making this logic work well on Safari/iOS:
 // https://codesandbox.io/s/tabbable-portal-f4tng?file=/src/FocusTrap.tsx
@@ -30,21 +31,13 @@ function setActiveElementOnTab(event: KeyboardEvent) {
   }
 }
 
-function isTabFocus(event: React.FocusEvent<HTMLElement>) {
-  const result = activeElement === event.relatedTarget;
-  activeElement = event.relatedTarget as typeof activeElement;
-  clearTimeout(timeoutId);
-  return result;
-}
-
-export const FocusGuard = React.forwardRef<
-  HTMLSpanElement,
-  React.HTMLProps<HTMLSpanElement>
->(function FocusGuard(props, ref) {
-  const onFocus = useEvent(props.onFocus);
+export const FocusGuard = React.forwardRef(function FocusGuard(
+  props: React.ComponentPropsWithoutRef<'span'>,
+  ref: React.ForwardedRef<HTMLSpanElement>,
+) {
   const [role, setRole] = React.useState<'button' | undefined>();
 
-  useIsomorphicLayoutEffect(() => {
+  useModernLayoutEffect(() => {
     if (isSafari()) {
       // Unlike other screen readers such as NVDA and JAWS, the virtual cursor
       // on VoiceOver does trigger the onFocus event, so we can use the focus
@@ -60,28 +53,15 @@ export const FocusGuard = React.forwardRef<
     };
   }, []);
 
-  return (
-    <span
-      {...props}
-      ref={ref}
-      tabIndex={0}
-      // Role is only for VoiceOver
-      role={role}
-      aria-hidden={role ? undefined : true}
-      data-floating-ui-focus-guard=""
-      style={HIDDEN_STYLES}
-      onFocus={(event) => {
-        if (isSafari() && isMac() && !isTabFocus(event)) {
-          // On macOS we need to wait a little bit before moving
-          // focus again.
-          event.persist();
-          timeoutId = window.setTimeout(() => {
-            onFocus(event);
-          }, 50);
-        } else {
-          onFocus(event);
-        }
-      }}
-    />
-  );
+  const restProps = {
+    ref,
+    tabIndex: 0,
+    // Role is only for VoiceOver
+    role,
+    'aria-hidden': role ? undefined : true,
+    [createAttribute('focus-guard')]: '',
+    style: HIDDEN_STYLES,
+  };
+
+  return <span {...props} {...restProps} />;
 });

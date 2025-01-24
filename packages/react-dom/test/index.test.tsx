@@ -1,23 +1,22 @@
-/**
- * @jest-environment jsdom
- */
+import {act, cleanup, fireEvent, render, screen} from '@testing-library/react';
+import * as React from 'react';
+import {vi} from 'vitest';
+
 import {
-  useFloating,
-  offset,
-  flip,
-  shift,
-  size,
   arrow,
+  flip,
   hide,
   limitShift,
+  offset,
+  shift,
+  size,
+  useFloating,
 } from '../src';
-import {render, fireEvent, screen, cleanup, act} from '@testing-library/react';
-import {useRef, useState, useEffect} from 'react';
 
 test('middleware is always fresh and does not cause an infinite loop', async () => {
   function InlineMiddleware() {
-    const arrowRef = useRef(null);
-    const {reference, floating} = useFloating({
+    const arrowRef = React.useRef(null);
+    const {refs} = useFloating({
       placement: 'right',
       middleware: [
         offset(),
@@ -54,15 +53,15 @@ test('middleware is always fresh and does not cause an infinite loop', async () 
 
     return (
       <>
-        <div ref={reference} />
-        <div ref={floating} />
+        <div ref={refs.setReference} />
+        <div ref={refs.setFloating} />
       </>
     );
   }
 
   function StateMiddleware() {
-    const arrowRef = useRef(null);
-    const [middleware, setMiddleware] = useState([
+    const arrowRef = React.useRef(null);
+    const [middleware, setMiddleware] = React.useState([
       offset(),
       offset(10),
       offset(() => 5),
@@ -96,15 +95,15 @@ test('middleware is always fresh and does not cause an infinite loop', async () 
         },
       }),
     ]);
-    const {x, y, reference, floating} = useFloating({
+    const {x, y, refs} = useFloating({
       placement: 'right',
       middleware,
     });
 
     return (
       <>
-        <div ref={reference} />
-        <div ref={floating} />
+        <div ref={refs.setReference} />
+        <div ref={refs.setFloating} />
         <button
           data-testid="step1"
           onClick={() => setMiddleware([offset(10)])}
@@ -145,14 +144,14 @@ test('middleware is always fresh and does not cause an infinite loop', async () 
 
 describe('whileElementsMounted', () => {
   test('is called a single time when both elements mount', () => {
-    const spy = jest.fn();
+    const spy = vi.fn();
 
     function App() {
-      const {reference, floating} = useFloating({whileElementsMounted: spy});
+      const {refs} = useFloating({whileElementsMounted: spy});
       return (
         <>
-          <button ref={reference} />
-          <div ref={floating} />
+          <button ref={refs.setReference} />
+          <div ref={refs.setFloating} />
         </>
       );
     }
@@ -163,15 +162,15 @@ describe('whileElementsMounted', () => {
   });
 
   test('is called a single time after floating mounts conditionally', () => {
-    const spy = jest.fn();
+    const spy = vi.fn();
 
     function App() {
-      const [open, setOpen] = useState(false);
-      const {reference, floating} = useFloating({whileElementsMounted: spy});
+      const [open, setOpen] = React.useState(false);
+      const {refs} = useFloating({whileElementsMounted: spy});
       return (
         <>
-          <button ref={reference} onClick={() => setOpen(true)} />
-          {open && <div ref={floating} />}
+          <button ref={refs.setReference} onClick={() => setOpen(true)} />
+          {open && <div ref={refs.setFloating} />}
         </>
       );
     }
@@ -185,15 +184,19 @@ describe('whileElementsMounted', () => {
   });
 
   test('is called a single time after reference mounts conditionally', () => {
-    const spy = jest.fn();
+    const spy = vi.fn();
 
     function App() {
-      const [open, setOpen] = useState(false);
-      const {reference, floating} = useFloating({whileElementsMounted: spy});
+      const [open, setOpen] = React.useState(false);
+      const {refs} = useFloating({whileElementsMounted: spy});
       return (
         <>
-          {open && <button ref={reference} />}
-          <div role="tooltip" ref={floating} onClick={() => setOpen(true)} />
+          {open && <button ref={refs.setReference} />}
+          <div
+            role="tooltip"
+            ref={refs.setFloating}
+            onClick={() => setOpen(true)}
+          />
         </>
       );
     }
@@ -207,20 +210,20 @@ describe('whileElementsMounted', () => {
   });
 
   test('is called a single time both elements mount conditionally', () => {
-    const spy = jest.fn();
+    const spy = vi.fn();
 
     function App() {
-      const [open, setOpen] = useState(false);
-      const {reference, floating} = useFloating({whileElementsMounted: spy});
+      const [open, setOpen] = React.useState(false);
+      const {refs} = useFloating({whileElementsMounted: spy});
 
-      useEffect(() => {
+      React.useEffect(() => {
         setOpen(true);
       }, []);
 
       return (
         <>
-          {open && <button ref={reference} />}
-          {open && <div role="tooltip" ref={floating} />}
+          {open && <button ref={refs.setReference} />}
+          {open && <div role="tooltip" ref={refs.setFloating} />}
         </>
       );
     }
@@ -232,21 +235,21 @@ describe('whileElementsMounted', () => {
   });
 
   test('calls the cleanup function', () => {
-    const cleanupSpy = jest.fn();
-    const spy = jest.fn(() => cleanupSpy);
+    const cleanupSpy = vi.fn();
+    const spy = vi.fn(() => cleanupSpy);
 
     function App() {
-      const [open, setOpen] = useState(true);
-      const {reference, floating} = useFloating({whileElementsMounted: spy});
+      const [open, setOpen] = React.useState(true);
+      const {refs} = useFloating({whileElementsMounted: spy});
 
-      useEffect(() => {
+      React.useEffect(() => {
         setOpen(false);
       }, []);
 
       return (
         <>
-          {open && <button ref={reference} />}
-          {open && <div role="tooltip" ref={floating} />}
+          {open && <button ref={refs.setReference} />}
+          {open && <div role="tooltip" ref={refs.setFloating} />}
         </>
       );
     }
@@ -259,4 +262,345 @@ describe('whileElementsMounted', () => {
 
     cleanup();
   });
+});
+
+test('unstable callback refs', async () => {
+  function App() {
+    const {refs} = useFloating();
+
+    return (
+      <>
+        <div ref={(node: HTMLDivElement | null) => refs.setReference(node)} />
+        <div ref={(node: HTMLDivElement | null) => refs.setFloating(node)} />
+      </>
+    );
+  }
+
+  render(<App />);
+
+  await act(async () => {});
+
+  cleanup();
+});
+
+test('isPositioned', async () => {
+  const spy = vi.fn();
+
+  function App() {
+    const [open, setOpen] = React.useState(false);
+    const {refs, isPositioned} = useFloating({
+      open,
+    });
+
+    React.useLayoutEffect(() => {
+      spy(isPositioned);
+    }, [isPositioned]);
+
+    return (
+      <>
+        <button ref={refs.setReference} onClick={() => setOpen((v) => !v)} />
+        {open && <div ref={refs.setFloating} />}
+      </>
+    );
+  }
+
+  const {getByRole} = render(<App />);
+
+  fireEvent.click(getByRole('button'));
+
+  expect(spy.mock.calls[0][0]).toBe(false);
+
+  await act(async () => {});
+
+  expect(spy.mock.calls[1][0]).toBe(true);
+
+  fireEvent.click(getByRole('button'));
+
+  expect(spy.mock.calls[2][0]).toBe(false);
+
+  fireEvent.click(getByRole('button'));
+  await act(async () => {});
+
+  expect(spy.mock.calls[3][0]).toBe(true);
+
+  fireEvent.click(getByRole('button'));
+  expect(spy.mock.calls[4][0]).toBe(false);
+});
+
+test('external elements sync', async () => {
+  function App() {
+    const [referenceEl, setReferenceEl] = React.useState<HTMLElement | null>(
+      null,
+    );
+    const [floatingEl, setFloatingEl] = React.useState<HTMLElement | null>(
+      null,
+    );
+    const {x, y, refs} = useFloating();
+
+    React.useLayoutEffect(() => {
+      refs.setReference(referenceEl);
+    }, [refs, referenceEl]);
+
+    React.useLayoutEffect(() => {
+      refs.setFloating(floatingEl);
+    }, [refs, floatingEl]);
+
+    return (
+      <>
+        <div ref={setReferenceEl} />
+        <div ref={setFloatingEl} />
+        <div data-testid="value">{`${x},${y}`}</div>
+      </>
+    );
+  }
+
+  const {getByTestId} = render(<App />);
+
+  await act(async () => {});
+
+  expect(getByTestId('value').textContent).toBe('0,0');
+});
+
+test('external reference element sync', async () => {
+  function App() {
+    const [referenceEl, setReferenceEl] = React.useState<HTMLElement | null>(
+      null,
+    );
+    const {x, y, refs} = useFloating({
+      elements: {
+        reference: referenceEl,
+      },
+    });
+
+    return (
+      <>
+        <div data-testid="reference" ref={setReferenceEl} />
+        <div ref={refs.setFloating} />
+        <div data-testid="value">{`${x},${y}`}</div>
+      </>
+    );
+  }
+
+  const {getByTestId} = render(<App />);
+  const mockBoundingClientRect = vi.fn(() => ({
+    x: 0,
+    y: 0,
+    width: 50,
+    height: 50,
+    top: 0,
+    right: 50,
+    bottom: 50,
+    left: 0,
+    toJSON: () => {},
+  }));
+  const reference = getByTestId('reference');
+  reference.getBoundingClientRect = mockBoundingClientRect;
+
+  await act(async () => {});
+
+  expect(getByTestId('value').textContent).toBe('25,50');
+});
+
+test('external floating element sync', async () => {
+  function App() {
+    const [floatingEl, setFloatingEl] = React.useState<HTMLElement | null>(
+      null,
+    );
+    const {x, y, refs} = useFloating({
+      elements: {
+        floating: floatingEl,
+      },
+    });
+
+    return (
+      <>
+        <div data-testid="reference" ref={refs.setReference} />
+        <div ref={setFloatingEl} />
+        <div data-testid="value">{`${x},${y}`}</div>
+      </>
+    );
+  }
+
+  const {getByTestId} = render(<App />);
+  const mockBoundingClientRect = vi.fn(() => ({
+    x: 0,
+    y: 0,
+    width: 50,
+    height: 50,
+    top: 0,
+    right: 50,
+    bottom: 50,
+    left: 0,
+    toJSON: () => {},
+  }));
+  const reference = getByTestId('reference');
+  reference.getBoundingClientRect = mockBoundingClientRect;
+
+  await act(async () => {});
+
+  expect(getByTestId('value').textContent).toBe('25,50');
+});
+
+test('external elements sync', async () => {
+  function App() {
+    const [referenceEl, setReferenceEl] = React.useState<HTMLElement | null>(
+      null,
+    );
+    const [floatingEl, setFloatingEl] = React.useState<HTMLElement | null>(
+      null,
+    );
+    const {x, y} = useFloating({
+      elements: {
+        reference: referenceEl,
+        floating: floatingEl,
+      },
+    });
+
+    return (
+      <>
+        <div data-testid="reference" ref={setReferenceEl} />
+        <div ref={setFloatingEl} />
+        <div data-testid="value">{`${x},${y}`}</div>
+      </>
+    );
+  }
+
+  const {getByTestId} = render(<App />);
+  const mockBoundingClientRect = vi.fn(() => ({
+    x: 0,
+    y: 0,
+    width: 50,
+    height: 50,
+    top: 0,
+    right: 50,
+    bottom: 50,
+    left: 0,
+    toJSON: () => {},
+  }));
+  const reference = getByTestId('reference');
+  reference.getBoundingClientRect = mockBoundingClientRect;
+
+  await act(async () => {});
+
+  expect(getByTestId('value').textContent).toBe('25,50');
+});
+
+test('external elements sync update', async () => {
+  function App() {
+    const [referenceEl, setReferenceEl] = React.useState<HTMLElement | null>(
+      null,
+    );
+    const [floatingEl, setFloatingEl] = React.useState<HTMLElement | null>(
+      null,
+    );
+    const {x, y} = useFloating({
+      elements: {
+        reference: referenceEl,
+        floating: floatingEl,
+      },
+    });
+
+    return (
+      <>
+        <div data-testid="reference" ref={setReferenceEl} />
+        <div ref={setFloatingEl} />
+        <div data-testid="value">{`${x},${y}`}</div>
+      </>
+    );
+  }
+
+  const {getByTestId} = render(<App />);
+  await act(async () => {});
+
+  expect(getByTestId('value').textContent).toBe('0,0');
+});
+
+test('floatingStyles no transform', async () => {
+  function App() {
+    const {refs, floatingStyles} = useFloating({
+      transform: false,
+    });
+
+    return (
+      <>
+        <div data-testid="reference" ref={refs.setReference} />
+        <div
+          data-testid="floating"
+          ref={refs.setFloating}
+          style={floatingStyles}
+        />
+      </>
+    );
+  }
+
+  const {getByTestId} = render(<App />);
+
+  const mockBoundingClientRect = vi.fn(() => ({
+    x: 0,
+    y: 0,
+    width: 50,
+    height: 50,
+    top: 0,
+    right: 50,
+    bottom: 50,
+    left: 0,
+    toJSON: () => {},
+  }));
+  const reference = getByTestId('reference');
+  reference.getBoundingClientRect = mockBoundingClientRect;
+
+  expect(getByTestId('floating').style.position).toBe('absolute');
+  expect(getByTestId('floating').style.top).toBe('0px');
+  expect(getByTestId('floating').style.left).toBe('0px');
+
+  await act(async () => {});
+
+  expect(getByTestId('floating').style.position).toBe('absolute');
+  expect(getByTestId('floating').style.top).toBe('50px');
+  expect(getByTestId('floating').style.left).toBe('25px');
+});
+
+test('floatingStyles default', async () => {
+  function App() {
+    const {refs, floatingStyles} = useFloating();
+
+    return (
+      <>
+        <div data-testid="reference" ref={refs.setReference} />
+        <div
+          data-testid="floating"
+          ref={refs.setFloating}
+          style={floatingStyles}
+        />
+      </>
+    );
+  }
+
+  const {getByTestId} = render(<App />);
+
+  const mockBoundingClientRect = vi.fn(() => ({
+    x: 0,
+    y: 0,
+    width: 50,
+    height: 50,
+    top: 0,
+    right: 50,
+    bottom: 50,
+    left: 0,
+    toJSON: () => {},
+  }));
+  const reference = getByTestId('reference');
+  reference.getBoundingClientRect = mockBoundingClientRect;
+
+  expect(getByTestId('floating').style.position).toBe('absolute');
+  expect(getByTestId('floating').style.top).toBe('0px');
+  expect(getByTestId('floating').style.left).toBe('0px');
+  expect(getByTestId('floating').style.transform).toBe('translate(0px, 0px)');
+
+  await act(async () => {});
+
+  expect(getByTestId('floating').style.position).toBe('absolute');
+  expect(getByTestId('floating').style.top).toBe('0px');
+  expect(getByTestId('floating').style.left).toBe('0px');
+  expect(getByTestId('floating').style.transform).toBe('translate(25px, 50px)');
 });

@@ -1,11 +1,14 @@
-import type {Placement} from '@floating-ui/core';
-import type {OffsetOptions} from '@floating-ui/core';
-import {useFloating, offset} from '@floating-ui/react-dom';
-import {allPlacements} from '../utils/allPlacements';
-import {useLayoutEffect, useState} from 'react';
-import {Controls} from '../utils/Controls';
+import type {OffsetOptions, Placement} from '@floating-ui/core';
+import {autoUpdate, offset, useFloating} from '@floating-ui/react-dom';
+import {useState} from 'react';
 
-const VALUES: Array<{offset: OffsetOptions; name: string}> = [
+import {Controls} from '../utils/Controls';
+import {allPlacements} from '../utils/allPlacements';
+
+const VALUES: Array<{
+  offset: OffsetOptions;
+  name: string;
+}> = [
   {offset: 0, name: '0'},
   {offset: 10, name: '10'},
   {offset: -10, name: '-10'},
@@ -24,30 +27,26 @@ export function Offset() {
   const [rtl, setRtl] = useState(false);
   const [placement, setPlacement] = useState<Placement>('bottom');
   const [offsetValue, setOffsetValue] = useState<OffsetOptions>(0);
-  const {x, y, reference, floating, strategy, update} = useFloating({
+  const {refs, floatingStyles} = useFloating({
     placement,
-    middleware: [offset(offsetValue)],
+    whileElementsMounted: autoUpdate,
+    middleware: [
+      {
+        ...offset(offsetValue),
+        options: [offsetValue, rtl, placement],
+      },
+    ],
   });
-
-  useLayoutEffect(update, [offsetValue, update, rtl]);
 
   return (
     <>
       <h1>Offset</h1>
       <p></p>
       <div className="container" style={{direction: rtl ? 'rtl' : 'ltr'}}>
-        <div ref={reference} className="reference">
+        <div ref={refs.setReference} className="reference">
           Reference
         </div>
-        <div
-          ref={floating}
-          className="floating"
-          style={{
-            position: strategy,
-            top: y ?? '',
-            left: x ?? '',
-          }}
-        >
+        <div ref={refs.setFloating} className="floating" style={floatingStyles}>
           Floating
         </div>
       </div>

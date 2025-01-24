@@ -1,19 +1,25 @@
-import type {ClientRectObject, VirtualElement} from '@floating-ui/core';
-import {FALLBACK_SCALE, getScale} from './getScale';
-import {isElement, isLayoutViewport} from './is';
+import type {ClientRectObject} from '@floating-ui/core';
+import {rectToClientRect} from '@floating-ui/core';
+import {createCoords} from '@floating-ui/utils';
+import {getComputedStyle, getWindow} from '@floating-ui/utils/dom';
+
+import {getScale} from '../platform/getScale';
+import {isElement} from '../platform/isElement';
+import {getVisualOffsets, shouldAddVisualOffsets} from './getVisualOffsets';
 import {unwrapElement} from './unwrapElement';
-import {getWindow} from './window';
+import type {VirtualElement} from '../types';
+import {getFrameElement} from '@floating-ui/utils/dom';
 
 export function getBoundingClientRect(
   element: Element | VirtualElement,
   includeScale = false,
   isFixedStrategy = false,
-  offsetParent?: Element | Window
+  offsetParent?: Element | Window,
 ): ClientRectObject {
   const clientRect = element.getBoundingClientRect();
   const domElement = unwrapElement(element);
 
-  let scale = FALLBACK_SCALE;
+  let scale = createCoords(1);
   if (includeScale) {
     if (offsetParent) {
       if (isElement(offsetParent)) {
@@ -24,17 +30,16 @@ export function getBoundingClientRect(
     }
   }
 
-  const win = domElement ? getWindow(domElement) : window;
-  const addVisualOffsets = !isLayoutViewport() && isFixedStrategy;
+  const visualOffsets = shouldAddVisualOffsets(
+    domElement,
+    isFixedStrategy,
+    offsetParent,
+  )
+    ? getVisualOffsets(domElement)
+    : createCoords(0);
 
-  let x =
-    (clientRect.left +
-      (addVisualOffsets ? win.visualViewport?.offsetLeft || 0 : 0)) /
-    scale.x;
-  let y =
-    (clientRect.top +
-      (addVisualOffsets ? win.visualViewport?.offsetTop || 0 : 0)) /
-    scale.y;
+  let x = (clientRect.left + visualOffsets.x) / scale.x;
+  let y = (clientRect.top + visualOffsets.y) / scale.y;
   let width = clientRect.width / scale.x;
   let height = clientRect.height / scale.y;
 
@@ -45,16 +50,18 @@ export function getBoundingClientRect(
         ? getWindow(offsetParent)
         : offsetParent;
 
-    let currentIFrame = win.frameElement;
-    while (currentIFrame && offsetParent && offsetWin !== win) {
+    let currentWin = win;
+    let currentIFrame = getFrameElement(currentWin);
+    while (currentIFrame && offsetParent && offsetWin !== currentWin) {
       const iframeScale = getScale(currentIFrame);
       const iframeRect = currentIFrame.getBoundingClientRect();
       const css = getComputedStyle(currentIFrame);
-
-      iframeRect.x +=
+      const left =
+        iframeRect.left +
         (currentIFrame.clientLeft + parseFloat(css.paddingLeft)) *
-        iframeScale.x;
-      iframeRect.y +=
+          iframeScale.x;
+      const top =
+        iframeRect.top +
         (currentIFrame.clientTop + parseFloat(css.paddingTop)) * iframeScale.y;
 
       x *= iframeScale.x;
@@ -62,21 +69,13 @@ export function getBoundingClientRect(
       width *= iframeScale.x;
       height *= iframeScale.y;
 
-      x += iframeRect.x;
-      y += iframeRect.y;
+      x += left;
+      y += top;
 
-      currentIFrame = getWindow(currentIFrame).frameElement;
+      currentWin = getWindow(currentIFrame);
+      currentIFrame = getFrameElement(currentWin);
     }
   }
 
-  return {
-    width,
-    height,
-    top: y,
-    right: x + width,
-    bottom: y + height,
-    left: x,
-    x,
-    y,
-  };
+  return rectToClientRect({width, height, x, y});
 }

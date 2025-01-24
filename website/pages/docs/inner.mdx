@@ -1,39 +1,49 @@
+<PageCard>
+
 # Inner
 
-You may want to position the floating element such that an
-_inner_ element inside of it is anchored to the reference
-element. The most common use case for this is a macOS-style
-select menu, where the selected item pops up directly over the
-target button.
+Positions the floating element such that an inner element inside
+of it is anchored to the reference element, while handling scroll
+and overflow behavior.
 
-Despite being related to positioning, the intricate UX details
-involved requires the modules to be available only for the
-interactions package.
+<ShowFor packages={['react-dom']}>
+
+<PackageLimited>@floating-ui/react only</PackageLimited>
+
+</ShowFor>
+
+</PageCard>
+
+The most common use case for this is a macOS-style select menu,
+where the selected item pops up directly over the target button.
 
 ## Usage
 
 There are two modules: `inner(){:js}` and
 `useInnerOffset(){:js}`.
 
-- `inner(){:js}` is a middleware that positions the floating
-  element such that an inner element inside of it is anchored to
-  the reference element.
+- <WordHighlight id="a" children="inner" /> is a middleware that positions
+  the floating element such that an inner element inside of it is
+  anchored to the reference element.
 
-- `useInnerOffset(){:js}` is an interaction hook that offsets the
-  anchoring upon a `wheel{:.string}` event. This allows the
-  floating element's height to expand, revealing more list items.
-  This is not strictly required but is necessary to match the UX
-  of the macOS-style select menu.
+- <WordHighlight id='b' children="useInnerOffset" /> is an interaction Hook that offsets the
+anchoring upon a `wheel{:.string}` event. This allows the
+floating element's height to expand, revealing more list items.
+This is not strictly required but is necessary to match the UX
+of the macOS-style select menu.
 
-```js /inner/ /useInnerOffset/
+```js /inner/1-2#a /useInnerOffset/1-2#b
 import {inner, useInnerOffset} from '@floating-ui/react';
 
-// ...
+// Inside your component
 const {context} = useFloating({
   middleware: [inner()],
 });
+
+const innerOffset = useInnerOffset(context);
+
 const {getReferenceProps, getFloatingProps} = useInteractions([
-  useInnerOffset(context),
+  innerOffset,
 ]);
 ```
 
@@ -46,7 +56,7 @@ const {getReferenceProps, getFloatingProps} = useInteractions([
 ## inner Props
 
 ```js
-interface Props extends DetectOverflowOptions {
+interface InnerProps extends DetectOverflowOptions {
   listRef: React.MutableRefObject<Array<HTMLElement | null>>;
   index: number;
   offset?: number;
@@ -54,13 +64,13 @@ interface Props extends DetectOverflowOptions {
   scrollRef?: React.MutableRefObject<HTMLElement | null>;
   referenceOverflowThreshold?: number;
   minItemsVisible?: number;
-  onFallbackChange?: (fallback: boolean) => void;
+  onFallbackChange?(fallback: boolean): void;
 }
 ```
 
-### listRef
+### `listRef{:.key}`
 
-**Required**
+<Required />
 
 default: `[]{:js}`
 
@@ -68,16 +78,16 @@ An ref containing an array of list items inside the floating
 element.
 
 ```js
-const listRef = React.useRef([]);
+const listRef = useRef([]);
 
 inner({
   listRef,
 });
 ```
 
-### index
+### `index{:.key}`
 
-**Required**
+<Required />
 
 default: `0{:js}`
 
@@ -85,23 +95,23 @@ The index of the list item that should be anchored to the
 reference element.
 
 ```js
-const [index, setIndex] = React.useState(0);
+const [index, setIndex] = useState(0);
 
 inner({
   index,
 });
 ```
 
-### overflowRef
+### `overflowRef{:.key}`
 
 default: `undefined{:js}`
 
 A ref containing a `SideObject{:.class}`. This is used to
 determine the overflow of the floating element and is required
-when using the `useInnerOffset(){:js}` interaction hook.
+when using the `useInnerOffset(){:js}` interaction Hook.
 
 ```js
-const overflowRef = React.useRef({
+const overflowRef = useRef({
   top: 0,
   bottom: 0,
   left: 0,
@@ -113,7 +123,7 @@ inner({
 });
 ```
 
-### scrollRef
+### `scrollRef{:.key}`
 
 default: `undefined{:js}`
 
@@ -122,7 +132,7 @@ used as the scrolling container instead of the floating element —
 for instance, to position inner elements as direct children
 without being interfered by scrolling layout.
 
-### referenceOverflowThreshold
+### `referenceOverflowThreshold{:.key}`
 
 default: `0{:js}`
 
@@ -138,7 +148,7 @@ inner({
 });
 ```
 
-### minItemsVisible
+### `minItemsVisible{:.key}`
 
 default: `4{:js}`
 
@@ -153,7 +163,7 @@ inner({
 });
 ```
 
-### offset
+### `offset{:.key}`
 
 default: `0{:js}`
 
@@ -165,7 +175,7 @@ inner({
 });
 ```
 
-### onFallbackChange
+### `onFallbackChange{:.function}`
 
 default: no-op
 
@@ -174,31 +184,31 @@ enter fallback mode. You should fallback to middleware that
 create standard anchor positioning when `true{:js}`.
 
 ```js
-const [fallback, setFallback] = React.useState(false);
+const [fallback, setFallback] = useState(false);
 
 inner({
   onFallbackChange: setFallback,
 });
 ```
 
-## useInnerOffset Props
+## `useInnerOffset` Props
 
 ```js
-interface Props extends DetectOverflowOptions {
+interface UseInnerOffsetProps {
   enabled?: boolean;
   overflowRef: React.MutableRefObject<SideObject | null>;
-  scrollRef?: React.MutableRefObject<HTMLElement | null>;
-  onChange: (
+  onChange(
     offset: number | ((offset: number) => number)
-  ) => void;
+  ): void;
+  scrollRef?: React.MutableRefObject<HTMLElement | null>;
 }
 ```
 
-### enabled
+### `enabled{:.key}`
 
 default: `true{:js}`
 
-Conditionally enable/disable the hook.
+Conditionally enable/disable the Hook.
 
 ```js
 useInnerOffset(context, {
@@ -206,9 +216,9 @@ useInnerOffset(context, {
 });
 ```
 
-### overflowRef
+### `overflowRef{:.key}`
 
-**Required**
+<Required />
 
 default: `undefined{:js}`
 
@@ -216,7 +226,7 @@ A ref containing a `SideObject{:.class}`. This is used to
 determine the overflow of the floating element.
 
 ```js
-const overflowRef = React.useRef({
+const overflowRef = useRef({
   top: 0,
   bottom: 0,
   left: 0,
@@ -228,18 +238,9 @@ useInnerOffset(context, {
 });
 ```
 
-### scrollRef
+### `onChange{:.function}`
 
-default: `undefined{:js}`
-
-An optional ref containing an `HTMLElement{:.class}`. This may be
-used as the scrolling container instead of the floating element —
-for instance, to position inner elements as direct children
-without being interfered by scrolling layout.
-
-### onChange
-
-**Required**
+<Required />
 
 default: no-op
 
@@ -248,7 +249,7 @@ A callback that is invoked with a new offset upon the
 the floating element's height.
 
 ```js
-const [offset, setOffset] = React.useState(0);
+const [offset, setOffset] = useState(0);
 
 const {context} = useFloating({
   middleware: [
@@ -264,3 +265,12 @@ useInnerOffset(context, {
   onChange: setOffset,
 });
 ```
+
+### `scrollRef{:.key}`
+
+default: `undefined{:js}`
+
+An optional ref containing an `HTMLElement{:.class}`. This may be
+used as the scrolling container instead of the floating element —
+for instance, to position inner elements as direct children
+without being interfered by scrolling layout.

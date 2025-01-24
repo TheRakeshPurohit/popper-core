@@ -1,39 +1,40 @@
+import './index.css';
+
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import {
   BrowserRouter,
   Link,
-  Routes,
-  Route,
   Outlet,
+  Route,
+  Routes,
   useLocation,
 } from 'react-router-dom';
-import './index.css';
+
+import {Arrow} from './spec/Arrow';
+import {AutoPlacement} from './spec/AutoPlacement';
+import {AutoUpdate} from './spec/AutoUpdate';
+import {Border} from './spec/Border';
+import {ContainingBlock} from './spec/ContainingBlock';
+import {DecimalSize} from './spec/DecimalSize';
+import {Flip} from './spec/Flip';
+import {Hide} from './spec/Hide';
+import {IFrame} from './spec/IFrame';
+import {Inline} from './spec/Inline';
+import {Offset} from './spec/Offset';
+import {Perf} from './spec/Perf';
 import {Placement} from './spec/Placement';
 import {Relative} from './spec/Relative';
-import {Transform} from './spec/Transform';
-import {Border} from './spec/Border';
 import {Scroll} from './spec/Scroll';
-import {DecimalSize} from './spec/DecimalSize';
-import {Table} from './spec/Table';
 import {Scrollbars} from './spec/Scrollbars';
-import {Shift} from './spec/Shift';
-import {Flip} from './spec/Flip';
-import {Size} from './spec/Size';
-import {Arrow} from './spec/Arrow';
-import {Offset} from './spec/Offset';
-import {Hide} from './spec/Hide';
-import {AutoPlacement} from './spec/AutoPlacement';
-import {Inline} from './spec/Inline';
-import {AutoUpdate} from './spec/AutoUpdate';
-import {Inner} from './spec/Inner';
 import {ShadowDOM} from './spec/ShadowDOM';
-import {ContainingBlock} from './spec/ContainingBlock';
-import {Perf} from './spec/Perf';
-import {IFrame} from './spec/IFrame';
-
-import {New} from './utils/New';
+import {Shift} from './spec/Shift';
+import {Size} from './spec/Size';
+import {Table} from './spec/Table';
+import {Transform} from './spec/Transform';
 import {VirtualElement} from './spec/VirtualElement';
+import {New} from './utils/New';
+import {TopLayer} from './spec/TopLayer';
 
 const ROUTES = [
   {path: 'placement', component: Placement},
@@ -53,12 +54,12 @@ const ROUTES = [
   {path: 'autoPlacement', component: AutoPlacement},
   {path: 'inline', component: Inline},
   {path: 'AutoUpdate', component: AutoUpdate},
-  {path: 'inner', component: Inner},
   {path: 'shadow-DOM', component: ShadowDOM},
   {path: 'containing-block', component: ContainingBlock},
   {path: 'virtual-element', component: VirtualElement},
   {path: 'perf', component: Perf},
   {path: 'iframe', component: IFrame},
+  {path: 'top-layer', component: TopLayer},
 ];
 
 function App() {
@@ -121,5 +122,5 @@ createRoot(document.getElementById('root') as HTMLElement).render(
         </Route>
       </Routes>
     </BrowserRouter>
-  </StrictMode>
+  </StrictMode>,
 );

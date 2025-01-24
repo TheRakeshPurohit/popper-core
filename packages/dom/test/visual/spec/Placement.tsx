@@ -1,19 +1,20 @@
 import type {Placement as PlacementType} from '@floating-ui/core';
-import {useFloating} from '@floating-ui/react-dom';
-import {allPlacements} from '../utils/allPlacements';
-import {useLayoutEffect, useState} from 'react';
+import {autoUpdate, useFloating} from '@floating-ui/react-dom';
+import {useState} from 'react';
+
+import {flushSync} from 'react-dom';
 import {Controls} from '../utils/Controls';
+import {allPlacements} from '../utils/allPlacements';
 import {useSize} from '../utils/useSize';
 
 export function Placement() {
   const [rtl, setRtl] = useState(false);
   const [placement, setPlacement] = useState<PlacementType>('bottom');
-  const {x, y, reference, floating, strategy, update} = useFloating({
+  const {refs, floatingStyles, update} = useFloating({
     placement,
+    whileElementsMounted: autoUpdate,
   });
   const [size, handleSizeChange] = useSize();
-
-  useLayoutEffect(update, [size, update, rtl]);
 
   return (
     <>
@@ -23,16 +24,14 @@ export function Placement() {
         the 12 placements.
       </p>
       <div className="container" style={{direction: rtl ? 'rtl' : 'ltr'}}>
-        <div ref={reference} className="reference">
+        <div ref={refs.setReference} className="reference">
           Reference
         </div>
         <div
-          ref={floating}
+          ref={refs.setFloating}
           className="floating"
           style={{
-            position: strategy,
-            top: y ?? '',
-            left: x ?? '',
+            ...floatingStyles,
             width: size,
             height: size,
           }}
@@ -74,7 +73,10 @@ export function Placement() {
           <button
             key={String(bool)}
             data-testid={`rtl-${bool}`}
-            onClick={() => setRtl(bool)}
+            onClick={() => {
+              flushSync(() => setRtl(bool));
+              update();
+            }}
             style={{
               backgroundColor: rtl === bool ? 'black' : '',
             }}

@@ -1,20 +1,21 @@
-import * as React from 'react';
-import mergeRefs from 'react-merge-refs';
 import {
-  useFloating,
-  offset,
   flip,
-  shift,
-  useHover,
-  useFocus,
-  useInteractions,
-  useDismiss,
-  safePolygon,
-  FloatingPortal,
-  useFloatingNodeId,
-  FloatingNode,
   FloatingFocusManager,
+  FloatingNode,
+  FloatingPortal,
+  offset,
+  safePolygon,
+  shift,
+  useDismiss,
+  useFloating,
+  useFloatingNodeId,
+  useFocus,
+  useHover,
+  useInteractions,
+  useMergeRefs,
 } from '@floating-ui/react';
+import {ChevronRightIcon} from '@radix-ui/react-icons';
+import * as React from 'react';
 
 interface SubItemProps {
   label: string;
@@ -24,7 +25,7 @@ interface SubItemProps {
 export const NavigationSubItem = React.forwardRef<
   HTMLAnchorElement,
   SubItemProps & React.HTMLProps<HTMLAnchorElement>
->(({label, href, ...props}, ref) => {
+>(function NavigationSubItem({label, href, ...props}, ref) {
   return (
     <a {...props} ref={ref} href={href} className="NavigationItem">
       {label}
@@ -41,20 +42,19 @@ interface ItemProps {
 export const NavigationItem = React.forwardRef<
   HTMLAnchorElement,
   ItemProps & React.HTMLProps<HTMLAnchorElement>
->(({children, label, href, ...props}, ref) => {
+>(function NavigationItem({children, label, href, ...props}, ref) {
   const [open, setOpen] = React.useState(false);
   const hasChildren = !!children;
 
   const nodeId = useFloatingNodeId();
 
-  const {x, y, reference, floating, strategy, context} =
-    useFloating<HTMLAnchorElement>({
-      open,
-      nodeId,
-      onOpenChange: setOpen,
-      middleware: [offset({mainAxis: 4, alignmentAxis: -5}), flip(), shift()],
-      placement: 'right-start',
-    });
+  const {floatingStyles, refs, context} = useFloating<HTMLAnchorElement>({
+    open,
+    nodeId,
+    onOpenChange: setOpen,
+    middleware: [offset(8), flip(), shift()],
+    placement: 'right-start',
+  });
 
   const {getReferenceProps, getFloatingProps} = useInteractions([
     useHover(context, {
@@ -69,10 +69,7 @@ export const NavigationItem = React.forwardRef<
     }),
   ]);
 
-  const mergedReferenceRef = React.useMemo(
-    () => mergeRefs([ref, reference]),
-    [reference, ref]
-  );
+  const mergedReferenceRef = useMergeRefs([ref, refs.setReference]);
 
   return (
     <FloatingNode id={nodeId}>
@@ -80,12 +77,11 @@ export const NavigationItem = React.forwardRef<
         <a
           href={href}
           ref={mergedReferenceRef}
-          {...getReferenceProps({
-            ...props,
-            className: `NavigationItem`,
-          })}
+          className="w-48 bg-slate-100 p-2 rounded my-1 flex justify-between items-center"
+          {...getReferenceProps(props)}
         >
           {label}
+          {hasChildren && <ChevronRightIcon />}
         </a>
       </li>
       <FloatingPortal>
@@ -93,25 +89,19 @@ export const NavigationItem = React.forwardRef<
           <FloatingFocusManager
             context={context}
             modal={false}
-            returnFocus={true}
             initialFocus={-1}
           >
             <div
               data-testid="subnavigation"
-              ref={floating}
-              className="SubNavigation"
-              style={{
-                position: strategy,
-                top: y ?? 0,
-                left: x ?? 0,
-                width: 'max-content',
-              }}
+              ref={refs.setFloating}
+              className="flex flex-col bg-slate-100 overflow-y-auto rounded outline-none px-4 py-2 backdrop-blur-sm"
+              style={floatingStyles}
               {...getFloatingProps()}
             >
               <button type="button" onClick={() => setOpen(false)}>
                 Close
               </button>
-              <ul className="NavigationList">{children}</ul>
+              <ul className="flex flex-col">{children}</ul>
             </div>
           </FloatingFocusManager>
         )}
@@ -134,14 +124,19 @@ export const Navigation = (props: NavigationProps) => {
 
 export const Main = () => {
   return (
-    <Navigation>
-      <NavigationItem label="Home" href="#" />
-      <NavigationItem label="Product" href="#">
-        <NavigationSubItem label="Link 1" href="#" />
-        <NavigationSubItem label="Link 2" href="#" />
-        <NavigationSubItem label="Link 3" href="#" />
-      </NavigationItem>
-      <NavigationItem label="About" href="#" />
-    </Navigation>
+    <>
+      <h1 className="text-5xl font-bold mb-8">Navigation</h1>
+      <div className="grid place-items-center border border-slate-400 rounded lg:w-[40rem] h-[20rem] mb-4">
+        <Navigation>
+          <NavigationItem label="Home" href="#" />
+          <NavigationItem label="Product" href="#">
+            <NavigationSubItem label="Link 1" href="#" />
+            <NavigationSubItem label="Link 2" href="#" />
+            <NavigationSubItem label="Link 3" href="#" />
+          </NavigationItem>
+          <NavigationItem label="About" href="#" />
+        </Navigation>
+      </div>
+    </>
   );
 };

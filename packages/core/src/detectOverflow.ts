@@ -1,59 +1,56 @@
+import type {Padding, SideObject} from '@floating-ui/utils';
+import {evaluate, getPaddingObject, rectToClientRect} from '@floating-ui/utils';
+
 import type {
-  SideObject,
-  Padding,
   Boundary,
-  RootBoundary,
+  Derivable,
   ElementContext,
-  MiddlewareArguments,
+  MiddlewareState,
+  RootBoundary,
 } from './types';
-import {paintDebugRects} from './utils/debugRects';
-import {getSideObjectFromPadding} from './utils/getPaddingObject';
-import {rectToClientRect} from './utils/rectToClientRect';
 
-const DEBUG_RECTS = false;
-
-export interface Options {
+export interface DetectOverflowOptions {
   /**
-   * The clipping element(s) in which overflow will be checked.
+   * The clipping element(s) or area in which overflow will be checked.
    * @default 'clippingAncestors'
    */
-  boundary: Boundary;
+  boundary?: Boundary;
   /**
-   * The root clipping element in which overflow will be checked.
+   * The root clipping area in which overflow will be checked.
    * @default 'viewport'
    */
-  rootBoundary: RootBoundary;
+  rootBoundary?: RootBoundary;
   /**
    * The element in which overflow is being checked relative to a boundary.
    * @default 'floating'
    */
-  elementContext: ElementContext;
+  elementContext?: ElementContext;
   /**
    * Whether to check for overflow using the alternate element's boundary
    * (`clippingAncestors` boundary only).
    * @default false
    */
-  altBoundary: boolean;
+  altBoundary?: boolean;
   /**
-   * Virtual padding for the resolved overflow offsets.
+   * Virtual padding for the resolved overflow detection offsets.
    * @default 0
    */
-  padding: Padding;
+  padding?: Padding;
 }
 
 /**
  * Resolves with an object of overflow side offsets that determine how much the
- * element is overflowing a given clipping boundary.
+ * element is overflowing a given clipping boundary on each side.
  * - positive = overflowing the boundary by that number of pixels
  * - negative = how many pixels left before it will overflow
  * - 0 = lies flush with the boundary
  * @see https://floating-ui.com/docs/detectOverflow
  */
 export async function detectOverflow(
-  middlewareArguments: MiddlewareArguments,
-  options: Partial<Options> = {}
+  state: MiddlewareState,
+  options: DetectOverflowOptions | Derivable<DetectOverflowOptions> = {},
 ): Promise<SideObject> {
-  const {x, y, platform, rects, elements, strategy} = middlewareArguments;
+  const {x, y, platform, rects, elements, strategy} = state;
 
   const {
     boundary = 'clippingAncestors',
@@ -61,9 +58,9 @@ export async function detectOverflow(
     elementContext = 'floating',
     altBoundary = false,
     padding = 0,
-  } = options;
+  } = evaluate(options, state);
 
-  const paddingObject = getSideObjectFromPadding(padding);
+  const paddingObject = getPaddingObject(padding);
   const altContext = elementContext === 'floating' ? 'reference' : 'floating';
   const element = elements[altBoundary ? altContext : elementContext];
 
@@ -77,11 +74,13 @@ export async function detectOverflow(
       boundary,
       rootBoundary,
       strategy,
-    })
+    }),
   );
 
   const rect =
-    elementContext === 'floating' ? {...rects.floating, x, y} : rects.reference;
+    elementContext === 'floating'
+      ? {x, y, width: rects.floating.width, height: rects.floating.height}
+      : rects.reference;
 
   const offsetParent = await platform.getOffsetParent?.(elements.floating);
   const offsetScale = (await platform.isElement?.(offsetParent))
@@ -91,18 +90,13 @@ export async function detectOverflow(
   const elementClientRect = rectToClientRect(
     platform.convertOffsetParentRelativeRectToViewportRelativeRect
       ? await platform.convertOffsetParentRelativeRectToViewportRelativeRect({
+          elements,
           rect,
           offsetParent,
           strategy,
         })
-      : rect
+      : rect,
   );
-
-  if (__DEV__) {
-    if (DEBUG_RECTS) {
-      paintDebugRects(elementClientRect, clippingClientRect);
-    }
-  }
 
   return {
     top:

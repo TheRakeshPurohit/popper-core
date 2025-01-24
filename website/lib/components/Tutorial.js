@@ -1,24 +1,30 @@
-import React, {forwardRef} from 'react';
-import {Chrome} from './Chrome';
 import {
-  useFloating,
-  flip,
-  shift,
-  offset,
   arrow,
-} from '@floating-ui/react-dom';
+  flip,
+  offset,
+  shift,
+  useFloating,
+} from '@floating-ui/react';
+import React, {forwardRef} from 'react';
 import {useState} from 'react';
 import useIsomorphicLayoutEffect from 'use-isomorphic-layout-effect';
 
-const Button = forwardRef(({children, ...props}, ref) => (
-  <button
-    ref={ref}
-    className="bg-gray-100 px-2 rounded"
-    {...props}
-  >
-    {children}
-  </button>
-));
+import {Chrome} from './Chrome';
+
+const Button = forwardRef(function Button(
+  {children, ...props},
+  ref,
+) {
+  return (
+    <button
+      ref={ref}
+      className="rounded bg-gray-100 px-2"
+      {...props}
+    >
+      {children}
+    </button>
+  );
+});
 
 export const Result1 = () => {
   return (
@@ -33,7 +39,7 @@ export const Result2 = () => {
   return (
     <Chrome>
       <Button>My button</Button>
-      <div className="bg-gray-900 text-gray-50 rounded font-bold text-sm p-1">
+      <div className="rounded bg-gray-900 p-1 text-sm font-bold text-gray-50">
         My tooltip
       </div>
     </Chrome>
@@ -45,7 +51,7 @@ export const Result3 = () => {
     <Chrome>
       <Button>My button</Button>
       <div
-        className="absolute bg-gray-900 text-gray-50 rounded font-bold text-sm p-1 top-0 left-0"
+        className="absolute top-0 left-0 rounded bg-gray-900 p-1 text-sm font-bold text-gray-50"
         style={{
           pointerEvents: 'none',
         }}
@@ -57,18 +63,16 @@ export const Result3 = () => {
 };
 
 export const Result4 = () => {
-  const {x, y, reference, floating, strategy} = useFloating();
+  const {refs, floatingStyles} = useFloating();
 
   return (
     <Chrome>
-      <Button ref={reference}>My button</Button>
+      <Button ref={refs.setReference}>My button</Button>
       <div
-        ref={floating}
-        className="bg-gray-900 text-gray-50 rounded font-bold text-sm p-1"
+        ref={refs.setFloating}
+        className="rounded bg-gray-900 p-1 text-sm font-bold text-gray-50"
         style={{
-          position: strategy,
-          top: y ?? 0,
-          left: x ?? 0,
+          ...floatingStyles,
           pointerEvents: 'none',
         }}
       >
@@ -79,20 +83,18 @@ export const Result4 = () => {
 };
 
 export const Result5 = () => {
-  const {x, y, reference, floating, strategy} = useFloating({
+  const {refs, floatingStyles} = useFloating({
     placement: 'right',
   });
 
   return (
     <Chrome>
-      <Button ref={reference}>My button</Button>
+      <Button ref={refs.setReference}>My button</Button>
       <div
-        ref={floating}
-        className="bg-gray-900 text-gray-50 rounded font-bold text-sm p-1"
+        ref={refs.setFloating}
+        className="rounded bg-gray-900 p-1 text-sm font-bold text-gray-50"
         style={{
-          position: strategy,
-          top: y ?? 0,
-          left: x ?? 0,
+          ...floatingStyles,
           pointerEvents: 'none',
         }}
       >
@@ -103,21 +105,17 @@ export const Result5 = () => {
 };
 
 export const Result6 = () => {
-  const {x, y, reference, floating, strategy} = useFloating({
+  const {refs, floatingStyles} = useFloating({
     placement: 'top',
   });
 
   return (
     <Chrome>
-      <Button ref={reference}>My button</Button>
+      <Button ref={refs.setReference}>My button</Button>
       <div
-        ref={floating}
-        className="bg-gray-900 text-gray-50 rounded font-bold text-sm p-1"
-        style={{
-          position: strategy,
-          top: y ?? 0,
-          left: x ?? 0,
-        }}
+        ref={refs.setFloating}
+        className="rounded bg-gray-900 p-1 text-sm font-bold text-gray-50"
+        style={floatingStyles}
       >
         My tooltip
       </div>
@@ -126,21 +124,19 @@ export const Result6 = () => {
 };
 
 export const Result7 = () => {
-  const {x, y, reference, floating, strategy} = useFloating({
+  const {refs, floatingStyles} = useFloating({
     placement: 'top',
     middleware: [flip({rootBoundary: 'document'})],
   });
 
   return (
     <Chrome>
-      <Button ref={reference}>My button</Button>
+      <Button ref={refs.setReference}>My button</Button>
       <div
-        ref={floating}
-        className="bg-gray-900 text-gray-50 rounded font-bold text-sm p-1"
+        ref={refs.setFloating}
+        className="rounded bg-gray-900 p-1 text-sm font-bold text-gray-50"
         style={{
-          position: strategy,
-          top: y ?? 0,
-          left: x ?? 0,
+          ...floatingStyles,
           pointerEvents: 'none',
         }}
       >
@@ -151,21 +147,19 @@ export const Result7 = () => {
 };
 
 export const Result8 = () => {
-  const {x, y, reference, floating, strategy} = useFloating({
+  const {refs, floatingStyles} = useFloating({
     placement: 'top',
     middleware: [flip({rootBoundary: 'document'})],
   });
 
   return (
     <Chrome>
-      <Button ref={reference}>My button</Button>
+      <Button ref={refs.setReference}>My button</Button>
       <div
-        ref={floating}
-        className="bg-gray-900 text-gray-50 rounded font-bold text-sm p-1"
+        ref={refs.setFloating}
+        className="rounded bg-gray-900 p-1 text-sm font-bold text-gray-50"
         style={{
-          position: strategy,
-          top: y ?? 0,
-          left: x ?? 0,
+          ...floatingStyles,
           pointerEvents: 'none',
         }}
       >
@@ -176,21 +170,19 @@ export const Result8 = () => {
 };
 
 export const Result9 = () => {
-  const {x, y, reference, floating, strategy} = useFloating({
+  const {refs, floatingStyles} = useFloating({
     placement: 'top',
     middleware: [flip({rootBoundary: 'document'}), shift()],
   });
 
   return (
     <Chrome>
-      <Button ref={reference}>My button</Button>
+      <Button ref={refs.setReference}>My button</Button>
       <div
-        ref={floating}
-        className="bg-gray-900 text-gray-50 rounded font-bold text-sm p-1"
+        ref={refs.setFloating}
+        className="rounded bg-gray-900 p-1 text-sm font-bold text-gray-50"
         style={{
-          position: strategy,
-          top: y ?? 0,
-          left: x ?? 0,
+          ...floatingStyles,
           pointerEvents: 'none',
         }}
       >
@@ -201,7 +193,7 @@ export const Result9 = () => {
 };
 
 export const Result10 = () => {
-  const {x, y, reference, floating, strategy} = useFloating({
+  const {refs, floatingStyles} = useFloating({
     placement: 'top',
     middleware: [
       flip({rootBoundary: 'document'}),
@@ -211,14 +203,12 @@ export const Result10 = () => {
 
   return (
     <Chrome>
-      <Button ref={reference}>My button</Button>
+      <Button ref={refs.setReference}>My button</Button>
       <div
-        ref={floating}
-        className="bg-gray-900 text-gray-50 rounded font-bold text-sm p-1"
+        ref={refs.setFloating}
+        className="rounded bg-gray-900 p-1 text-sm font-bold text-gray-50"
         style={{
-          position: strategy,
-          top: y ?? 0,
-          left: x ?? 0,
+          ...floatingStyles,
           pointerEvents: 'none',
         }}
       >
@@ -229,7 +219,7 @@ export const Result10 = () => {
 };
 
 export const Result11 = () => {
-  const {x, y, reference, floating, strategy} = useFloating({
+  const {refs, floatingStyles} = useFloating({
     placement: 'top',
     middleware: [
       offset(6),
@@ -240,14 +230,12 @@ export const Result11 = () => {
 
   return (
     <Chrome>
-      <Button ref={reference}>My button</Button>
+      <Button ref={refs.setReference}>My button</Button>
       <div
-        ref={floating}
-        className="bg-gray-900 text-gray-50 rounded font-bold text-sm p-1"
+        ref={refs.setFloating}
+        className="rounded bg-gray-900 p-1 text-sm font-bold text-gray-50"
         style={{
-          position: strategy,
-          top: y ?? 0,
-          left: x ?? 0,
+          ...floatingStyles,
           pointerEvents: 'none',
         }}
       >
@@ -261,11 +249,8 @@ export const Result12 = () => {
   const [arrowEl, setArrowEl] = useState(null);
 
   const {
-    x,
-    y,
-    reference,
-    floating,
-    strategy,
+    refs,
+    floatingStyles,
     placement,
     update,
     middlewareData: {arrow: {x: arrowX, y: arrowY} = {}},
@@ -285,23 +270,21 @@ export const Result12 = () => {
 
   return (
     <Chrome>
-      <Button ref={reference}>My button</Button>
+      <Button ref={refs.setReference}>My button</Button>
       <div
-        ref={floating}
-        className="bg-gray-900 text-gray-50 rounded font-bold text-sm p-1"
+        ref={refs.setFloating}
+        className="rounded bg-gray-900 p-1 text-sm font-bold text-gray-50"
         style={{
-          position: strategy,
-          top: y ?? 0,
-          left: x ?? 0,
+          ...floatingStyles,
           pointerEvents: 'none',
         }}
       >
         My tooltip with more content
         <div
           ref={setArrowEl}
-          className="w-2 h-2 bg-gray-1000 rotate-45"
+          className="h-2 w-2 rotate-45 bg-gray-1000"
           style={{
-            position: strategy,
+            position: 'absolute',
             top: arrowY ?? '',
             left: arrowX ?? '',
             right: '',
@@ -324,11 +307,8 @@ export const Result13 = () => {
   const [arrowEl, setArrowEl] = useState(null);
 
   const {
-    x,
-    y,
-    reference,
-    floating,
-    strategy,
+    refs,
+    floatingStyles,
     placement,
     update,
     middlewareData: {arrow: {x: arrowX, y: arrowY} = {}},
@@ -353,7 +333,7 @@ export const Result13 = () => {
         onMouseLeave={() => setShow(false)}
         onFocus={() => setShow(true)}
         onBlur={() => setShow(false)}
-        ref={reference}
+        ref={refs.setReference}
         aria-describedby="tooltip"
       >
         My button
@@ -362,21 +342,19 @@ export const Result13 = () => {
         <div
           id="tooltip"
           role="tooltip"
-          ref={floating}
-          className="bg-gray-900 text-gray-50 rounded font-bold text-sm p-1"
+          ref={refs.setFloating}
+          className="rounded bg-gray-900 p-1 text-sm font-bold text-gray-50"
           style={{
-            position: strategy,
-            top: y ?? 0,
-            left: x ?? 0,
+            ...floatingStyles,
             pointerEvents: 'none',
           }}
         >
           My tooltip with more content
           <div
             ref={setArrowEl}
-            className="w-2 h-2 bg-gray-1000 rotate-45"
+            className="h-2 w-2 rotate-45 bg-gray-1000"
             style={{
-              position: strategy,
+              position: 'absolute',
               top: arrowY ?? '',
               left: arrowX ?? '',
               right: '',

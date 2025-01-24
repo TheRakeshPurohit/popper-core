@@ -1,3 +1,5 @@
+<PageCard>
+
 # React Native
 
 This package provides React Native bindings for
@@ -5,41 +7,36 @@ This package provides React Native bindings for
 for a floating element to position it next to a given reference
 element.
 
-## Install
-
-```shell
+```bash
 npm install @floating-ui/react-native
 ```
+
+</PageCard>
 
 ## Usage
 
 The `useFloating(){:js}` hook accepts all of
-[computePosition's options](/docs/computePosition#options)
-excluding `strategy{:.objectKey}`.
+[`computePosition`'s options](/docs/computePosition#options)
+excluding `strategy{:.key}`.
 
 ```jsx
 import {View, Text} from 'react-native';
 import {useFloating, shift} from '@floating-ui/react-native';
 
 function App() {
-  const {x, y, reference, floating} = useFloating({
-    placement: 'right',
+  const {refs, floatingStyles} = useFloating({
     middleware: [shift()],
   });
 
   return (
     <View>
-      <View ref={reference} collapsable={false}>
+      <View ref={refs.setReference} collapsable={false}>
         <Text>Reference</Text>
       </View>
       <View
-        ref={floating}
+        ref={refs.setFloating}
         collapsable={false}
-        style={{
-          position: 'absolute',
-          top: y ?? 0,
-          left: x ?? 0,
-        }}
+        style={floatingStyles}
       >
         <Text>Floating</Text>
       </View>
@@ -51,96 +48,55 @@ function App() {
 This will position the floating element at the **bottom center**
 of the reference element by default.
 
-- `x{:.const}` and `y{:.const}` are the positioning coordinates.
-  These values are `null{:js}` initially, before the layout
-  effect has fired.
-- `reference{:.const}` and `floating{:.const}` are callback refs
-  that ensure the position is updated when either element changes
-  (e.g. conditional rendering).
+Positioning is relative to the parent by default, see
+[ScrollView](/docs/react-native#scrollview) or
+[offsetParent](/docs/react-native#offsetparent) to adjust this.
+
+- `refs.setReference{:js}` is the reference (or anchor) element
+  that is being referred to for positioning.
+- `refs.setFloating{:js}` is the floating element that is being
+  positioned relative to the reference element.
+- `floatingStyles{:js}` is an object of positioning styles to
+  apply to the floating element's `style{:.keyword}` prop.
+
+The refs are functions to make them **reactive** — this ensures
+changes to the reference or floating elements, such as with
+conditional rendering, are handled correctly by updating the
+position.
 
 <Notice gap="above">
   `<View collapsable={false} />{:js}` allows measurements to work
   on Android. [More info here](https://github.com/facebook/react-native/issues/29712).
 </Notice>
 
-## Updating
-
-`useFloating(){:js}` only calculates the position **once** on
-render, or when the reference/floating elements changed.
-Depending on the context in which the floating element lives, you
-may need to update its position in an effect.
-
-The hook returns an `update(){:js}` function to update the
-position:
-
-```js
-const {update} = useFloating();
-```
-
-## External reference
-
-As `reference{:.const}` is a callback ref, you can keep the hook
-synchronized with your external element using a layout effect:
-
-```js /triggerElement/1-3
-function MyComponent({triggerElement}) {
-  const {reference} = useFloating();
-
-  useLayoutEffect(() => {
-    reference(triggerElement);
-  }, [reference, triggerElement]);
-}
-```
-
-## Internal refs
-
-```js
-const {refs} = useFloating();
-```
-
-If another library's hook requires a `ref{:.objectKey}` passed to
-it, you can do so:
-
-```js
-const {refs} = useFloating();
-const otherLib = useOtherLib({
-  ref: refs.floating, // or refs.reference
-});
-```
-
 ## ScrollView
 
 When your floating element is portaled to the app root, while the
-reference element is inside a `<ScrollView />{:jsx}`, you pass
-the `sameScrollView{:.objectKey}` option, and spread
-`scrollProps{:.const}` to the component:
+reference element is inside a `<ScrollView />{:jsx}`, pass the
+`sameScrollView{:.key}` option, and spread `scrollProps{:.const}`
+to the component:
 
-```jsx /scrollProps/ {7}
+```jsx /scrollProps/ {6}
 import {View, Text, ScrollView} from 'react-native';
 import {useFloating} from '@floating-ui/react-native';
 
 function App() {
-  const {x, y, reference, floating, scrollProps} = useFloating({
-    placement: 'right',
+  const {refs, floatingStyles, scrollProps} = useFloating({
     sameScrollView: false,
   });
 
   return (
     <View>
       <ScrollView {...scrollProps}>
-        <View ref={reference} collapsable={false}>
+        <View ref={refs.setReference} collapsable={false}>
           <Text>Reference</Text>
         </View>
       </ScrollView>
 
       <View
-        ref={floating}
+        ref={refs.setFloating}
         collapsable={false}
-        style={{
-          position: 'absolute',
-          top: y ?? 0,
-          left: x ?? 0,
-        }}
+        style={floatingStyles}
       >
         <Text>Floating</Text>
       </View>
@@ -149,50 +105,60 @@ function App() {
 }
 ```
 
-## offsetParent
+## Anchoring
 
-Pass this to the floating element's `offsetParent{:.const}`, if
-required:
+`useFloating(){:js}` only calculates the position **once** on
+render, or when the reference/floating elements changed.
+Depending on the context in which the floating element lives, you
+may need to update its position in an Effect.
 
-```jsx /offsetParent/
-import {View, Text, ScrollView} from 'react-native';
-import {useFloating} from '@floating-ui/react-native';
+The Hook returns an `update(){:js}` function to update the
+position at will:
 
-function App() {
-  const {x, y, reference, floating, offsetParent} = useFloating({
-    placement: 'right',
-    sameScrollView: false,
+```js
+const {update} = useFloating();
+```
+
+## Refs
+
+To access the elements, you can either access the refs:
+
+```js
+const {refs} = useFloating();
+
+// Inside an Effect or event handler:
+refs.reference.current;
+refs.floating.current;
+```
+
+Or the elements directly:
+
+```js
+const {elements} = useFloating();
+
+// During render, unlike the refs:
+elements.reference;
+elements.floating;
+```
+
+External elements can be synchronized like so, if they live
+outside the component:
+
+```js
+function MyComponent({referenceEl, floatingEl}) {
+  const {refs} = useFloating({
+    elements: {
+      reference: referenceEl,
+      floating: floatingEl,
+    },
   });
-
-  return (
-    <View>
-      <ScrollView>
-        <View ref={reference} collapsable={false}>
-          <Text>Reference</Text>
-        </View>
-      </ScrollView>
-
-      <View ref={offsetParent} collapsable={false}>
-        <View
-          ref={floating}
-          collapsable={false}
-          style={{
-            position: 'absolute',
-            top: y ?? 0,
-            left: x ?? 0,
-          }}
-        >
-          <Text>Floating</Text>
-        </View>
-      </View>
-    </View>
-  );
 }
 ```
 
 ## Arrow
 
-A `ref{:.const}` can be passed as the `element{:.objectKey}`:
+A plain `ref{:.const}` can be passed as the `element{:.key}`
+value:
 
 ```jsx /arrowRef/1-2 {11}
 import {useRef} from 'react';
@@ -201,8 +167,8 @@ import {useFloating, arrow} from '@floating-ui/react-native';
 function App() {
   const arrowRef = useRef();
   const {
-    x,
-    y,
+    refs,
+    floatingStyles,
     middlewareData: {arrow: {x: arrowX, y: arrowY} = {}},
   } = useFloating({
     middleware: [arrow({element: arrowRef})],
@@ -212,19 +178,38 @@ function App() {
 }
 ```
 
-### Conditional rendering
+## offsetParent
 
-If you're conditionally rendering the arrow element (not just the
-floating element), you'll want to utilize the same technique as
-the reference and floating elements which is a callback function
-that calls `update(){:js}` after assigning the ref value.
+Pass this to the floating element's `offsetParent`, if required
+for positioning:
 
-```js
-<View
-  collapsable={false}
-  ref={(node) => {
-    arrowRef.current = node;
-    update();
-  }}
-/>
+```jsx /offsetParent/
+import {View, Text, ScrollView} from 'react-native';
+import {useFloating} from '@floating-ui/react-native';
+
+function App() {
+  const {refs, floatingStyles} = useFloating({
+    sameScrollView: false,
+  });
+
+  return (
+    <View>
+      <ScrollView>
+        <View ref={refs.setReference} collapsable={false}>
+          <Text>Reference</Text>
+        </View>
+      </ScrollView>
+
+      <View ref={refs.setOffsetParent} collapsable={false}>
+        <View
+          ref={refs.setFloating}
+          collapsable={false}
+          style={floatingStyles}
+        >
+          <Text>Floating</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
 ```

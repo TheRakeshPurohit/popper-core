@@ -1,25 +1,62 @@
 import type {
-  AutoPlacementOptions,
+  ArrowOptions as CoreArrowOptions,
+  AutoPlacementOptions as CoreAutoPlacementOptions,
   ClientRectObject,
+  ComputePositionConfig as CoreComputePositionConfig,
   DetectOverflowOptions as CoreDetectOverflowOptions,
   Dimensions,
   ElementRects,
-  FlipOptions,
-  HideOptions,
+  FlipOptions as CoreFlipOptions,
+  HideOptions as CoreHideOptions,
   Middleware as CoreMiddleware,
-  MiddlewareArguments as CoreMiddlewareArguments,
   MiddlewareReturn,
-  Padding,
+  MiddlewareState as CoreMiddlewareState,
   Rect,
   RootBoundary,
-  ShiftOptions,
-  SideObject,
+  ShiftOptions as CoreShiftOptions,
   SizeOptions as CoreSizeOptions,
   Strategy,
-  ComputePositionConfig as CoreComputePositionConfig,
 } from '@floating-ui/core';
 
+type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
 type Promisable<T> = T | Promise<T>;
+
+export type Derivable<T> = (state: MiddlewareState) => T;
+
+export type OffsetValue =
+  | number
+  | {
+      /**
+       * The axis that runs along the side of the floating element. Represents
+       * the distance (gutter or margin) between the reference and floating
+       * element.
+       * @default 0
+       */
+      mainAxis?: number;
+      /**
+       * The axis that runs along the alignment of the floating element.
+       * Represents the skidding between the reference and floating element.
+       * @default 0
+       */
+      crossAxis?: number;
+      /**
+       * The same axis as `crossAxis` but applies only to aligned placements
+       * and inverts the `end` alignment. When set to a number, it overrides the
+       * `crossAxis` value.
+       *
+       * A positive number will move the floating element in the direction of
+       * the opposite edge to the one that is aligned, while a negative number
+       * the reverse.
+       * @default null
+       */
+      alignmentAxis?: number | null;
+    };
+// `OffsetOptions` in the core library were originally already `Derivable`. For
+// backwards-compatibility, re-define it here to use the DOM Derivable type.
+export type OffsetOptions = OffsetValue | Derivable<OffsetValue>;
 
 export interface Platform {
   // Required
@@ -34,20 +71,24 @@ export interface Platform {
     rootBoundary: RootBoundary;
     strategy: Strategy;
   }) => Promisable<Rect>;
-  getDimensions: (element: HTMLElement) => Promisable<Dimensions>;
+  getDimensions: (element: Element) => Promisable<Dimensions>;
 
   // Optional
-  convertOffsetParentRelativeRectToViewportRelativeRect?: (args: {
+  convertOffsetParentRelativeRectToViewportRelativeRect: (args: {
+    elements?: Elements;
     rect: Rect;
     offsetParent: Element;
     strategy: Strategy;
   }) => Promisable<Rect>;
-  getOffsetParent?: (element: Element) => Promisable<Element | Window>;
-  isElement?: (value: unknown) => Promisable<boolean>;
-  getDocumentElement?: (element: Element) => Promisable<HTMLElement>;
-  getClientRects?: (element: Element) => Promisable<Array<ClientRectObject>>;
-  isRTL?: (element: Element) => Promisable<boolean>;
-  getScale?: (element: HTMLElement) => Promisable<{x: number; y: number}>;
+  getOffsetParent: (
+    element: Element,
+    polyfill?: (element: HTMLElement) => Element | null,
+  ) => Promisable<Element | Window>;
+  isElement: (value: unknown) => Promisable<boolean>;
+  getDocumentElement: (element: Element) => Promisable<HTMLElement>;
+  getClientRects: (element: Element) => Promisable<Array<ClientRectObject>>;
+  isRTL: (element: Element) => Promisable<boolean>;
+  getScale: (element: HTMLElement) => Promisable<{x: number; y: number}>;
 }
 
 export interface NodeScroll {
@@ -55,36 +96,30 @@ export interface NodeScroll {
   scrollTop: number;
 }
 
-export type Boundary = 'clippingAncestors' | Element | Array<Element>;
+/**
+ * The clipping boundary area of the floating element.
+ */
+export type Boundary = 'clippingAncestors' | Element | Array<Element> | Rect;
 
-export type DetectOverflowOptions = Omit<
-  CoreDetectOverflowOptions,
-  'boundary'
-> & {
-  boundary: Boundary;
-};
+export type DetectOverflowOptions = Prettify<
+  Omit<CoreDetectOverflowOptions, 'boundary'> & {
+    boundary?: Boundary;
+  }
+>;
 
-export type SizeOptions = Omit<CoreSizeOptions, 'apply'> & {
-  /**
-   * Function that is called to perform style mutations to the floating element
-   * to change its size.
-   * @default undefined
-   */
-  apply(
-    args: MiddlewareArguments & {
-      availableWidth: number;
-      availableHeight: number;
-    }
-  ): Promisable<void>;
-};
-
-export type ComputePositionConfig = Omit<
-  CoreComputePositionConfig,
-  'middleware' | 'platform'
-> & {
-  middleware?: Array<Middleware | null | undefined | false>;
-  platform?: Platform;
-};
+export type ComputePositionConfig = Prettify<
+  Omit<CoreComputePositionConfig, 'middleware' | 'platform'> & {
+    /**
+     * Array of middleware objects to modify the positioning or provide data for
+     * rendering.
+     */
+    middleware?: Array<Middleware | null | undefined | false>;
+    /**
+     * Custom or extended platform object.
+     */
+    platform?: Platform;
+  }
+>;
 
 /**
  * Custom positioning reference element.
@@ -92,6 +127,7 @@ export type ComputePositionConfig = Omit<
  */
 export interface VirtualElement {
   getBoundingClientRect(): ClientRectObject;
+  getClientRects?(): Array<ClientRectObject> | DOMRectList;
   contextElement?: Element;
 }
 
@@ -103,108 +139,53 @@ export interface Elements {
   floating: FloatingElement;
 }
 
-export type MiddlewareArguments = Omit<CoreMiddlewareArguments, 'elements'> & {
-  elements: Elements;
-};
-
-export type Middleware = Omit<CoreMiddleware, 'fn'> & {
-  fn(args: MiddlewareArguments): Promisable<MiddlewareReturn>;
-};
-
+export type MiddlewareState = Prettify<
+  Omit<CoreMiddlewareState, 'elements'> & {
+    elements: Elements;
+  }
+>;
 /**
- * Automatically chooses the `placement` which has the most space available.
- * @see https://floating-ui.com/docs/autoPlacement
+ * @deprecated use `MiddlewareState` instead.
  */
-declare const autoPlacement: (
-  options?: Partial<AutoPlacementOptions & DetectOverflowOptions>
-) => Middleware;
+export type MiddlewareArguments = MiddlewareState;
 
-/**
- * Shifts the floating element in order to keep it in view when it will overflow
- * a clipping boundary.
- * @see https://floating-ui.com/docs/shift
- */
-declare const shift: (
-  options?: Partial<ShiftOptions & DetectOverflowOptions>
-) => Middleware;
+export type Middleware = Prettify<
+  Omit<CoreMiddleware, 'fn'> & {
+    fn(state: MiddlewareState): Promisable<MiddlewareReturn>;
+  }
+>;
 
-/**
- * Changes the placement of the floating element to one that will fit if the
- * initially specified `placement` does not.
- * @see https://floating-ui.com/docs/flip
- */
-declare const flip: (
-  options?: Partial<FlipOptions & DetectOverflowOptions>
-) => Middleware;
-
-/**
- * Provides data to change the size of the floating element. For instance,
- * prevent it from overflowing its clipping boundary or match the width of the
- * reference element.
- * @see https://floating-ui.com/docs/size
- */
-declare const size: (
-  options?: Partial<SizeOptions & DetectOverflowOptions>
-) => Middleware;
-
-/**
- * Positions an inner element of the floating element such that it is centered
- * to the reference element.
- * @see https://floating-ui.com/docs/arrow
- */
-declare const arrow: (options: {
-  element: HTMLElement;
-  padding?: Padding;
-}) => Middleware;
-
-/**
- * Provides data to hide the floating element in applicable situations, such as
- * when it is not in the same clipping context as the reference element.
- * @see https://floating-ui.com/docs/hide
- */
-declare const hide: (
-  options?: Partial<HideOptions & DetectOverflowOptions>
-) => Middleware;
-
-/**
- * Resolves with an object of overflow side offsets that determine how much the
- * element is overflowing a given clipping boundary.
- * - positive = overflowing the boundary by that number of pixels
- * - negative = how many pixels left before it will overflow
- * - 0 = lies flush with the boundary
- * @see https://floating-ui.com/docs/detectOverflow
- */
-declare const detectOverflow: (
-  middlewareArguments: MiddlewareArguments,
-  options?: Partial<DetectOverflowOptions>
-) => Promise<SideObject>;
-
-export {autoPlacement, shift, arrow, size, flip, hide, detectOverflow};
-export {offset, limitShift, inline} from '@floating-ui/core';
-export type {
-  Placement,
-  Strategy,
-  Alignment,
-  Side,
-  AlignedPlacement,
-  Axis,
-  Length,
-  Coords,
-  SideObject,
-  Dimensions,
-  Rect,
-  ElementRects,
-  ElementContext,
-  ClientRectObject,
-  Padding,
-  RootBoundary,
-  MiddlewareReturn,
-  MiddlewareData,
-  ComputePositionReturn,
-} from '@floating-ui/core';
-
-export {computePosition} from './';
-export {autoUpdate, Options as AutoUpdateOptions} from './autoUpdate';
-
-export {getOverflowAncestors} from './utils/getOverflowAncestors';
-export {platform} from './platform';
+export type SizeOptions = Prettify<
+  Omit<CoreSizeOptions, 'apply' | 'boundary'> &
+    DetectOverflowOptions & {
+      /**
+       * Function that is called to perform style mutations to the floating element
+       * to change its size.
+       * @default undefined
+       */
+      apply?(
+        args: MiddlewareState & {
+          availableWidth: number;
+          availableHeight: number;
+        },
+      ): Promisable<void>;
+    }
+>;
+export type ArrowOptions = Prettify<
+  Omit<CoreArrowOptions, 'element'> & {
+    element: Element;
+  }
+>;
+export type AutoPlacementOptions = Prettify<
+  Omit<CoreAutoPlacementOptions, 'boundary'> & DetectOverflowOptions
+>;
+export type ShiftOptions = Prettify<
+  Omit<CoreShiftOptions, 'boundary'> & DetectOverflowOptions
+>;
+export type FlipOptions = Prettify<
+  Omit<CoreFlipOptions, 'boundary'> & DetectOverflowOptions
+>;
+export type HideOptions = Prettify<
+  Omit<CoreHideOptions, 'boundary'> & DetectOverflowOptions
+>;
+export type {AutoUpdateOptions} from './autoUpdate';
